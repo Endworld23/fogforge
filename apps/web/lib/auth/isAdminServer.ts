@@ -1,7 +1,7 @@
-import { createServerClient } from "../supabase/server";
+import { createServerSupabase } from "../supabase/server";
 
 export async function isAdminServer() {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
   const {
     data: { user },
     error: userError,
