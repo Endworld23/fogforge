@@ -20,6 +20,7 @@ type MetroCategoryPageProps = {
 
 type ProviderRow = {
   id: string;
+  slug: string;
   business_name: string;
   city: string;
   state: string;
@@ -46,7 +47,7 @@ export default async function MetroCategoryPage({
       .schema("public")
       .from("providers")
       .select(
-        "id, business_name, city, state, phone, website_url, metros!inner(name,slug), categories!inner(slug)",
+        "id, slug, business_name, city, state, phone, website_url, metros!inner(name,slug), categories!inner(slug)",
         { count: "exact" }
       )
       .eq("metros.slug", params.metro)
@@ -91,31 +92,28 @@ export default async function MetroCategoryPage({
       ) : (
         <section className="grid gap-4 md:grid-cols-2">
           {providers.map((provider) => (
-            <Card key={provider.id}>
-              <CardHeader>
-                <CardTitle>{provider.business_name}</CardTitle>
-                <CardDescription>
-                  {provider.city}, {provider.state}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2 text-sm text-foreground">
-                {provider.phone ? (
-                  <a className="text-primary underline-offset-4 hover:underline" href={`tel:${provider.phone}`}>
-                    {provider.phone}
-                  </a>
-                ) : null}
-                {provider.website_url ? (
-                  <a
-                    className="text-primary underline-offset-4 hover:underline"
-                    href={provider.website_url}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    Visit website
-                  </a>
-                ) : null}
-              </CardContent>
-            </Card>
+            <Link
+              key={provider.id}
+              href={`/grease-trap-cleaning/${params.state}/${params.metro}/${provider.slug}`}
+              className="block"
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>{provider.business_name}</CardTitle>
+                  <CardDescription>
+                    {provider.city}, {provider.state}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2 text-sm text-foreground">
+                  {provider.phone ? (
+                    <span className="text-primary">{provider.phone}</span>
+                  ) : null}
+                  {provider.website_url ? (
+                    <span className="text-muted-foreground">Website available</span>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </section>
       )}
