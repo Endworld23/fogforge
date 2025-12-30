@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "../../lib/supabase/browser";
 
@@ -8,13 +8,26 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setCurrentUserEmail(user?.email ?? null);
+    };
+
+    fetchUser();
+  }, []);
 
   const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
-    setErrorMessage(null);
+    setStatusMessage(null);
 
     const supabase = createBrowserClient();
     const { error } = await supabase.auth.signInWithPassword({
@@ -25,7 +38,7 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (error) {
-      setErrorMessage(error.message);
+      setStatusMessage(error.message);
       return;
     }
 
@@ -34,10 +47,10 @@ export default function LoginPage() {
 
   const handleSignUp = async () => {
     setIsLoading(true);
-    setErrorMessage(null);
+    setStatusMessage(null);
 
     const supabase = createBrowserClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -45,7 +58,12 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (error) {
-      setErrorMessage(error.message);
+      setStatusMessage(error.message);
+      return;
+    }
+
+    if (!data.session) {
+      setStatusMessage("Check your email to confirm your account.");
       return;
     }
 
@@ -61,6 +79,22 @@ export default function LoginPage() {
         </header>
 
         <form className="space-y-4" onSubmit={handleSignIn}>
+          {currentUserEmail ? (
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+              Signed in as: {currentUserEmail}
+              <div className="mt-2">
+                <a
+                  className="text-emerald-100 underline underline-offset-4"
+                  href="/admin/import/providers"
+                >
+                  Go to provider import
+                </a>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">Not signed in.</p>
+          )}
+
           <label className="block text-sm">
             <span className="text-slate-300">Email</span>
             <input
@@ -86,9 +120,9 @@ export default function LoginPage() {
             />
           </label>
 
-          {errorMessage ? (
-            <p className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
-              {errorMessage}
+          {statusMessage ? (
+            <p className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-200">
+              {statusMessage}
             </p>
           ) : null}
 
