@@ -12,6 +12,7 @@ export async function isAdminServer() {
   }
 
   const { data, error } = await supabase
+    .schema("public")
     .from("admins")
     .select("user_id")
     .eq("user_id", user.id)
