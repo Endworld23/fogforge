@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRight, Building2, LogOut, ShieldCheck, User } from "lucide-react";
+import { Building2, LogOut, ShieldCheck, User } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Input } from "../ui/input";
 import { Separator } from "../ui/separator";
 import { cn } from "../../lib/utils";
+import { getMetroSuggestions, getStateMatches, type MetroOption } from "../../lib/metroSearch";
 
 type HeaderProps = {
   isAuthenticated: boolean;
@@ -25,6 +26,12 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const accountLabel = isAdmin ? "Admin" : isProvider ? "Provider" : "Account";
+  const [metros, setMetros] = useState<MetroOption[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  const suggestions = useMemo(() => getMetroSuggestions(metros, query), [metros, query]);
+  const stateMatches = useMemo(() => getStateMatches(query), [query]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -48,8 +55,23 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
     };
   }, []);
 
+  useEffect(() => {
+    const fetchMetros = async () => {
+      try {
+        const response = await fetch("/api/metros");
+        if (!response.ok) return;
+        const data = (await response.json()) as MetroOption[];
+        setMetros(data);
+      } catch {
+        setMetros([]);
+      }
+    };
+
+    fetchMetros();
+  }, []);
+
   return (
-    <header className="border-b border-border bg-background/90 backdrop-blur">
+    <header className="relative z-50 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-6 lg:justify-start">
           <Link className="flex items-center gap-3" href="/">
@@ -71,21 +93,9 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
             >
               Grease Trap Cleaning
             </Link>
-            {isAuthenticated ? (
-              <Link className="rounded-full px-3 py-1 transition hover:text-foreground" href="/dashboard">
-                Dashboard
-              </Link>
-            ) : (
-              <Link
-                className="rounded-full px-3 py-1 transition hover:text-foreground"
-                href="/login"
-              >
-                For providers
-              </Link>
-            )}
-            {isAdmin ? (
-              <Link className="rounded-full px-3 py-1 transition hover:text-foreground" href="/admin">
-                Admin
+            {!isAuthenticated ? (
+              <Link className="rounded-full px-3 py-1 transition hover:text-foreground" href="/login">
+                Login
               </Link>
             ) : null}
           </nav>
@@ -100,14 +110,74 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
                 return;
               }
               router.push(`/grease-trap-cleaning?query=${encodeURIComponent(trimmed)}`);
-              setQuery("");
             }}
           >
-            <Input
-              placeholder="Search metros"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
+            <div className="relative w-full">
+              <Input
+                placeholder="Search metros"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setSearchOpen(true);
+                  setActiveIndex(-1);
+                }}
+                onFocus={() => setSearchOpen(true)}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setSearchOpen(false);
+                    setActiveIndex(-1);
+                  }, 100);
+                }}
+                onKeyDown={(event) => {
+                  if (!searchOpen || suggestions.length === 0) return;
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    setActiveIndex((prev) => (prev + 1) % suggestions.length);
+                  } else if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    setActiveIndex((prev) => (prev <= 0 ? suggestions.length - 1 : prev - 1));
+                  } else if (event.key === "Enter" && activeIndex >= 0) {
+                    event.preventDefault();
+                    const selected = suggestions[activeIndex];
+                    router.push(
+                      `/grease-trap-cleaning/${selected.state.toLowerCase()}/${selected.slug}`
+                    );
+                  } else if (event.key === "Escape") {
+                    setSearchOpen(false);
+                  }
+                }}
+              />
+              {searchOpen && suggestions.length > 0 ? (
+                <div
+                  className="absolute z-50 mt-2 w-full rounded-md border border-border bg-background shadow-lg"
+                  role="listbox"
+                >
+                  {suggestions.map((suggestion, index) => (
+                    <button
+                      key={`${suggestion.slug}-${suggestion.state}`}
+                      type="button"
+                      role="option"
+                      aria-selected={activeIndex === index}
+                      className={
+                        activeIndex === index
+                          ? "flex w-full items-center justify-between rounded-md bg-muted px-3 py-2 text-left text-sm text-foreground"
+                          : "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
+                      }
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        router.push(
+                          `/grease-trap-cleaning/${suggestion.state.toLowerCase()}/${suggestion.slug}`
+                        );
+                        setSearchOpen(false);
+                      }}
+                    >
+                      <span>{suggestion.name}</span>
+                      <span className="text-xs text-muted-foreground">{suggestion.state}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <Button type="submit" variant="outline">
               Search
             </Button>
@@ -152,14 +222,16 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
                       Admin
                     </Link>
                   ) : null}
-                  <Link
-                    className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground hover:bg-muted"
-                    href="/logout"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </Link>
+                  <form action="/logout" method="post">
+                    <button
+                      type="submit"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-foreground hover:bg-muted"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </form>
                 </Card>
               ) : null}
             </div>
@@ -174,13 +246,10 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
             </div>
           )}
 
-          {isAuthenticated ? (
-            <Button asChild>
-              <Link href="/dashboard" className="flex items-center gap-2">
-                Go to dashboard
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
+          {stateMatches.length > 0 ? (
+            <span className="hidden text-xs text-muted-foreground lg:inline">
+              Filtering {stateMatches.join(", ")}
+            </span>
           ) : null}
         </div>
       </div>

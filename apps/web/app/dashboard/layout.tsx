@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="relative z-0 mx-auto w-full max-w-6xl px-6 py-10">
       <div className="space-y-6">
         <div className="space-y-2">
           <Badge className="w-fit" variant="secondary">

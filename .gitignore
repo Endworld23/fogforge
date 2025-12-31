@@ -37,3 +37,7 @@ dist/
 
 # Coverage
 coverage/
+
+# Seed CSV outputs
+apps/web/seed-csv/*.csv
+apps/web/seed-civ/*.csv
