@@ -2,6 +2,8 @@
 
 import { Fragment, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { CheckCircle2, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -27,6 +29,7 @@ type LeadRow = {
   provider: { business_name: string; slug: string } | null;
   metro: { name: string; slug: string; state: string } | null;
   category: { slug: string; name: string | null } | null;
+  delivery: { status: string; error: string | null; created_at: string } | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -41,6 +44,11 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
   sent: "secondary",
   failed: "destructive",
   spam: "outline",
+};
+
+const deliveryVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  sent: "secondary",
+  failed: "destructive",
 };
 
 type LeadsTableProps = {
@@ -90,43 +98,59 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
     });
   };
 
+  const statusOptions = [
+    { value: "all", label: "All" },
+    { value: "new", label: "New" },
+    { value: "sent", label: "Sent" },
+    { value: "failed", label: "Failed" },
+    { value: "spam", label: "Spam" },
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-          >
-            <option value="all">All statuses</option>
-            <option value="new">New</option>
-            <option value="sent">Sent</option>
-            <option value="failed">Failed</option>
-            <option value="spam">Spam</option>
-          </select>
-          <Input
-            className="w-full md:w-64"
-            placeholder="Search provider or email"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {statusOptions.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={statusFilter === option.value ? "default" : "outline"}
+              onClick={() => setStatusFilter(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
         </div>
-        <p className="text-sm text-muted-foreground">
-          {filteredLeads.length} lead{filteredLeads.length === 1 ? "" : "s"}
-        </p>
+        <div className="flex flex-1 items-center justify-end gap-3">
+          <div className="relative w-full max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Search provider or email"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <Badge variant="outline">
+            {filteredLeads.length} lead{filteredLeads.length === 1 ? "" : "s"}
+          </Badge>
+        </div>
       </div>
 
       {notice ? (
-        <div
-          className={
-            notice.ok
-              ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
-              : "rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
-          }
-        >
-          {notice.message}
-        </div>
+        <Alert className={notice.ok ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}>
+          <AlertDescription className={notice.ok ? "text-emerald-900" : "text-rose-900"}>
+            {notice.ok ? (
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                {notice.message}
+              </span>
+            ) : (
+              notice.message
+            )}
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <Table>
@@ -140,13 +164,14 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
             <TableHead>Source</TableHead>
+            <TableHead>Delivery</TableHead>
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredLeads.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-sm text-muted-foreground">
+              <TableCell colSpan={10} className="text-center text-sm text-muted-foreground">
                 No leads match this filter.
               </TableCell>
             </TableRow>
@@ -204,15 +229,34 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                         "—"
                       )}
                     </TableCell>
+                    <TableCell>
+                      {lead.delivery ? (
+                        <Badge variant={deliveryVariants[lead.delivery.status] ?? "outline"}>
+                          {lead.delivery.status}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">pending</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           type="button"
                           onClick={() => toggleExpanded(lead.id)}
                         >
-                          {isExpanded ? "Hide" : "View"}
+                          {isExpanded ? (
+                            <>
+                              Hide
+                              <ChevronUp className="ml-1 h-4 w-4" />
+                            </>
+                          ) : (
+                            <>
+                              View
+                              <ChevronDown className="ml-1 h-4 w-4" />
+                            </>
+                          )}
                         </Button>
                         <Button
                           size="sm"
@@ -227,8 +271,17 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                   </TableRow>
                   {isExpanded ? (
                     <TableRow key={`${lead.id}-message`}>
-                      <TableCell colSpan={9} className="bg-muted/30 text-sm text-foreground">
-                        {lead.message ? lead.message : "No message provided."}
+                      <TableCell colSpan={10} className="bg-muted/30 text-sm text-foreground">
+                        <div className="space-y-2">
+                          <div className="whitespace-pre-wrap">
+                            {lead.message ? lead.message : "No message provided."}
+                          </div>
+                          {lead.delivery?.error ? (
+                            <div className="text-xs text-muted-foreground">
+                              Delivery error: {lead.delivery.error}
+                            </div>
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : null}

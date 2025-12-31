@@ -1,6 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { FileUp, UploadCloud } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "../../../../components/ui/alert";
+import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
+import { Input } from "../../../../components/ui/input";
+import { Separator } from "../../../../components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../../components/ui/table";
 import { createBrowserClient } from "../../../../lib/supabase/browser";
 import { importProvidersAction } from "./actions";
 
@@ -169,101 +184,156 @@ export default function ImportClient() {
   const previewRows = useMemo(() => rows.slice(0, 50), [rows]);
 
   return (
-    <section>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          const formData = new FormData();
-          formData.append("payload", JSON.stringify(rows));
-          formData.append("accessToken", accessToken);
-          startTransition(async () => {
-            const nextResult = await importProvidersAction(formData);
-            setResult(nextResult);
-          });
-        }}
-      >
-        <label>
-          CSV File
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = () => {
-                setCsvText(String(reader.result ?? ""));
-              };
-              reader.readAsText(file);
+    <section className="space-y-6">
+      <Card className="border-border">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <UploadCloud className="h-5 w-5 text-primary" />
+            Upload CSV
+          </CardTitle>
+          <CardDescription>
+            CSV headers must match the Admin Import template. We will preview the first 50 rows.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formData = new FormData();
+              formData.append("payload", JSON.stringify(rows));
+              formData.append("accessToken", accessToken);
+              startTransition(async () => {
+                const nextResult = await importProvidersAction(formData);
+                setResult(nextResult);
+              });
             }}
-          />
-        </label>
-        <button type="submit" disabled={rows.length === 0 || rowErrors.length > 0 || isPending}>
-          {isPending ? "Importing..." : "Import"}
-        </button>
-      </form>
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground" htmlFor="csv-file">
+                CSV file
+              </label>
+              <Input
+                id="csv-file"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    setCsvText(String(reader.result ?? ""));
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Include business_name, city, state, metro_slug, category, and at least phone or
+                website_url.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="submit"
+                disabled={rows.length === 0 || rowErrors.length > 0 || isPending}
+              >
+                {isPending ? "Importing..." : "Import"}
+              </Button>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline">{rows.length} rows</Badge>
+                <Badge variant="outline">{rowErrors.length} issues</Badge>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       {rowErrors.length > 0 && (
-        <div>
-          <h3>Row Errors</h3>
-          <ul>
-            {rowErrors.map((error) => (
-              <li key={`${error.index}-${error.error}`}>
-                Row {error.index + 1}: {error.error}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {rows.length > 0 && (
-        <div>
-          <h3>Preview (first {previewRows.length} rows)</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>business_name</th>
-                <th>city</th>
-                <th>state</th>
-                <th>metro_slug</th>
-                <th>category</th>
-                <th>phone</th>
-                <th>website_url</th>
-              </tr>
-            </thead>
-            <tbody>
-              {previewRows.map((row, index) => (
-                <tr key={`${row.business_name}-${index}`}>
-                  <td>{row.business_name}</td>
-                  <td>{row.city}</td>
-                  <td>{row.state}</td>
-                  <td>{row.metro_slug}</td>
-                  <td>{row.category}</td>
-                  <td>{row.phone ?? ""}</td>
-                  <td>{row.website_url ?? ""}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {result?.message && <p>{result.message}</p>}
-      {result && (result.inserted > 0 || result.updated > 0 || result.failed > 0) && (
-        <div>
-          <p>
-            Inserted: {result.inserted}, Updated: {result.updated}, Failed: {result.failed}
-          </p>
-          {result.rowErrors.length > 0 && (
-            <ul>
-              {result.rowErrors.map((error) => (
+        <Alert variant="destructive">
+          <AlertTitle>Row errors</AlertTitle>
+          <AlertDescription>
+            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {rowErrors.map((error) => (
                 <li key={`${error.index}-${error.error}`}>
                   Row {error.index + 1}: {error.error}
                 </li>
               ))}
             </ul>
-          )}
-        </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {rows.length > 0 && (
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="text-lg">Preview</CardTitle>
+            <CardDescription>First {previewRows.length} rows.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>business_name</TableHead>
+                  <TableHead>city</TableHead>
+                  <TableHead>state</TableHead>
+                  <TableHead>metro_slug</TableHead>
+                  <TableHead>category</TableHead>
+                  <TableHead>phone</TableHead>
+                  <TableHead>website_url</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {previewRows.map((row, index) => (
+                  <TableRow key={`${row.business_name}-${index}`}>
+                    <TableCell>{row.business_name}</TableCell>
+                    <TableCell>{row.city}</TableCell>
+                    <TableCell>{row.state}</TableCell>
+                    <TableCell>{row.metro_slug}</TableCell>
+                    <TableCell>{row.category}</TableCell>
+                    <TableCell>{row.phone ?? ""}</TableCell>
+                    <TableCell>{row.website_url ?? ""}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {result?.message && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+          <AlertTitle>Import status</AlertTitle>
+          <AlertDescription className="text-amber-900">{result.message}</AlertDescription>
+        </Alert>
+      )}
+      {result && (result.inserted > 0 || result.updated > 0 || result.failed > 0) && (
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileUp className="h-5 w-5 text-primary" />
+              Import summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">Inserted: {result.inserted}</Badge>
+              <Badge variant="secondary">Updated: {result.updated}</Badge>
+              <Badge variant="secondary">Failed: {result.failed}</Badge>
+            </div>
+            {result.rowErrors.length > 0 ? (
+              <>
+                <Separator />
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {result.rowErrors.map((error) => (
+                    <li key={`${error.index}-${error.error}`}>
+                      Row {error.index + 1}: {error.error}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </CardContent>
+        </Card>
       )}
     </section>
   );

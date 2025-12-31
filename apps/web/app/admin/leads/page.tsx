@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "../../../components/ui/alert";
+import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { isAdminServer } from "../../../lib/auth/isAdminServer";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
@@ -18,6 +20,7 @@ type LeadRow = {
   provider: { business_name: string; slug: string } | null;
   metro: { name: string; slug: string; state: string } | null;
   category: { slug: string; name: string | null } | null;
+  delivery: { status: string; error: string | null; created_at: string } | null;
 };
 
 export default async function AdminLeadsPage() {
@@ -36,6 +39,23 @@ export default async function AdminLeadsPage() {
     )
     .order("created_at", { ascending: false });
 
+  const { data: deliveries } = await supabase
+    .schema("public")
+    .from("lead_deliveries")
+    .select("lead_id, status, error, created_at")
+    .order("created_at", { ascending: false });
+
+  const latestDeliveryByLead = new Map<string, { status: string; error: string | null; created_at: string }>();
+  (deliveries ?? []).forEach((delivery) => {
+    if (!latestDeliveryByLead.has(delivery.lead_id)) {
+      latestDeliveryByLead.set(delivery.lead_id, {
+        status: delivery.status,
+        error: delivery.error ?? null,
+        created_at: delivery.created_at,
+      });
+    }
+  });
+
   const leads: LeadRow[] = (data ?? []).map((row) => ({
     id: row.id,
     created_at: row.created_at,
@@ -48,23 +68,38 @@ export default async function AdminLeadsPage() {
     provider: row.providers?.[0] ?? null,
     metro: row.metros?.[0] ?? null,
     category: row.categories?.[0] ?? null,
+    delivery: latestDeliveryByLead.get(row.id) ?? null,
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold text-foreground">Leads Inbox</h2>
+          <p className="text-sm text-muted-foreground">
+            Track incoming requests and delivery status in real time.
+          </p>
+        </div>
+        <Badge variant="secondary">{leads.length} leads</Badge>
+      </div>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Unable to load leads</AlertTitle>
+          <AlertDescription>
+            Please refresh or try again in a few minutes.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card>
         <CardHeader>
-          <CardTitle>Leads Inbox</CardTitle>
+          <CardTitle>Latest requests</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {error ? (
-            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              Unable to load leads right now.
-            </div>
-          ) : null}
+        <CardContent>
           <LeadsTable leads={leads} />
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }
