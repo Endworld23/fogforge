@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { createServerSupabase } from "../../../lib/supabase/server";
+import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
 
 type MetroRow = {
   id: string;
@@ -11,7 +11,7 @@ type MetroRow = {
 };
 
 export default async function GreaseTrapCleaningPage() {
-  const supabase = createServerSupabase();
+  const supabase = createServerSupabaseReadOnly();
   const { data, error } = await supabase
     .schema("public")
     .from("metros")

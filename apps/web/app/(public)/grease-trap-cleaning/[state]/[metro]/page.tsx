@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { Badge } from "../../../../../components/ui/badge";
-import { buttonVariants } from "../../../../../components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../../../components/ui/card";
-import { createServerSupabase } from "../../../../../lib/supabase/server";
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "../../../../../components/ui/breadcrumb";
+import { buttonVariants } from "../../../../../components/ui/button";
+import { Card, CardContent } from "../../../../../components/ui/card";
+import { createServerSupabaseReadOnly } from "../../../../../lib/supabase/server";
 import { cn } from "../../../../../lib/utils";
+import ProviderResults from "./ProviderResults";
 
 const PAGE_SIZE = 20;
 
@@ -26,7 +29,6 @@ type ProviderRow = {
   state: string;
   phone: string | null;
   website_url: string | null;
-  metros: { name: string; slug: string } | null;
 };
 
 export default async function MetroCategoryPage({
@@ -40,25 +42,46 @@ export default async function MetroCategoryPage({
   const rangeStart = (page - 1) * PAGE_SIZE;
   const rangeEnd = rangeStart + PAGE_SIZE - 1;
 
-  const supabase = createServerSupabase();
-  const [{ data: metroData }, { data, error, count }] = await Promise.all([
-    supabase.schema("public").from("metros").select("name, slug").eq("slug", params.metro).maybeSingle(),
+  const supabase = createServerSupabaseReadOnly();
+  const [{ data: metroData }, { data: categoryData }] = await Promise.all([
     supabase
       .schema("public")
-      .from("providers")
-      .select(
-        "id, slug, business_name, city, state, phone, website_url, metros!inner(name,slug), categories!inner(slug)",
-        { count: "exact" }
-      )
-      .eq("metros.slug", params.metro)
-      .eq("categories.slug", "grease-trap-cleaning")
-      .eq("is_published", true)
-      .eq("status", "active")
-      .order("business_name", { ascending: true })
-      .range(rangeStart, rangeEnd),
+      .from("metros")
+      .select("id, name, slug")
+      .eq("slug", params.metro)
+      .maybeSingle(),
+    supabase
+      .schema("public")
+      .from("categories")
+      .select("id, slug")
+      .eq("slug", "grease-trap-cleaning")
+      .maybeSingle(),
   ]);
 
-  const providers = (data ?? []) as ProviderRow[];
+  const metroId = metroData?.id ?? null;
+  const categoryId = categoryData?.id ?? null;
+  const { data, error, count } = metroId && categoryId
+    ? await supabase
+        .schema("public")
+        .from("providers")
+        .select("id, slug, business_name, city, state, phone, website_url", { count: "exact" })
+        .eq("metro_id", metroId)
+        .eq("category_id", categoryId)
+        .eq("is_published", true)
+        .eq("status", "active")
+        .order("business_name", { ascending: true })
+        .range(rangeStart, rangeEnd)
+    : { data: [], error: null, count: 0 };
+
+  const providers: ProviderRow[] = (data ?? []).map((provider) => ({
+    id: provider.id,
+    slug: provider.slug,
+    business_name: provider.business_name,
+    city: provider.city,
+    state: provider.state,
+    phone: provider.phone ?? null,
+    website_url: provider.website_url ?? null,
+  }));
   const totalCount = count ?? 0;
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / PAGE_SIZE);
   const hasPrev = page > 1;
@@ -68,6 +91,17 @@ export default async function MetroCategoryPage({
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <header className="space-y-2">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/grease-trap-cleaning">Grease Trap Cleaning</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{metroName}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <Badge className="w-fit" variant="secondary">
           Grease Trap Cleaning
         </Badge>
@@ -90,32 +124,7 @@ export default async function MetroCategoryPage({
           </CardContent>
         </Card>
       ) : (
-        <section className="grid gap-4 md:grid-cols-2">
-          {providers.map((provider) => (
-            <Link
-              key={provider.id}
-              href={`/grease-trap-cleaning/${params.state}/${params.metro}/${provider.slug}`}
-              className="block"
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>{provider.business_name}</CardTitle>
-                  <CardDescription>
-                    {provider.city}, {provider.state}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2 text-sm text-foreground">
-                  {provider.phone ? (
-                    <span className="text-primary">{provider.phone}</span>
-                  ) : null}
-                  {provider.website_url ? (
-                    <span className="text-muted-foreground">Website available</span>
-                  ) : null}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </section>
+        <ProviderResults providers={providers} state={params.state} metro={params.metro} />
       )}
 
       {totalPages > 1 ? (

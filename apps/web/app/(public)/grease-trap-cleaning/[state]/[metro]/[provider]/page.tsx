@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { Badge } from "../../../../../../components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "../../../../../../components/ui/breadcrumb";
 import { Button } from "../../../../../../components/ui/button";
 import {
   Card,
@@ -8,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../../../../components/ui/card";
-import { createServerSupabase } from "../../../../../../lib/supabase/server";
+import { createServerSupabaseReadOnly } from "../../../../../../lib/supabase/server";
 import LeadForm from "./LeadForm";
 
 type ProviderPageProps = {
@@ -29,7 +37,7 @@ type ProviderRow = {
 };
 
 export default async function ProviderDetailPage({ params }: ProviderPageProps) {
-  const supabase = createServerSupabase();
+  const supabase = createServerSupabaseReadOnly();
   const { data, error } = await supabase
     .schema("public")
     .from("providers")
@@ -70,6 +78,25 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <header className="space-y-2">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/grease-trap-cleaning">Grease Trap Cleaning</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink
+                href={`/grease-trap-cleaning/${params.state}/${params.metro}`}
+              >
+                {provider.metros.name}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{provider.business_name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <Badge className="w-fit" variant="secondary">
           Grease Trap Cleaning
         </Badge>
