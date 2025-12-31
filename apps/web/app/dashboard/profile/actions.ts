@@ -14,7 +14,10 @@ function toText(value: FormDataEntryValue | null) {
   return value.trim();
 }
 
-export async function updateProviderProfileAction(formData: FormData): Promise<UpdateResult> {
+export async function updateProviderProfileAction(
+  _prevState: UpdateResult,
+  formData: FormData
+): Promise<UpdateResult> {
   const supabase = createServerSupabase();
   const {
     data: { user },
