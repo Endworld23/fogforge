@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Card, CardContent, CardHeader } from "../../../components/ui/card";
 import { Separator } from "../../../components/ui/separator";
-import { Skeleton } from "../../../components/ui/skeleton";
-import { ChevronRight, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { getSiteUrl } from "../../../lib/seo";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
+import MetroDirectoryClient from "./MetroDirectoryClient";
 
 const siteUrl = getSiteUrl();
 
@@ -32,7 +31,11 @@ type MetroRow = {
   state: string;
 };
 
-export default async function GreaseTrapCleaningPage() {
+type GreaseTrapCleaningPageProps = {
+  searchParams?: { query?: string | string[] };
+};
+
+export default async function GreaseTrapCleaningPage({ searchParams }: GreaseTrapCleaningPageProps) {
   const supabase = createServerSupabaseReadOnly();
   const { data, error } = await supabase
     .schema("public")
@@ -46,6 +49,9 @@ export default async function GreaseTrapCleaningPage() {
     slug: metro.slug,
     state: metro.state,
   }));
+  const queryParam = Array.isArray(searchParams?.query)
+    ? searchParams?.query[0]
+    : searchParams?.query;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
@@ -66,7 +72,7 @@ export default async function GreaseTrapCleaningPage() {
               <Link href="/grease-trap-cleaning">Browse metros</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/login">List your business</Link>
+              <Link href="/onboarding">List your business</Link>
             </Button>
           </div>
         </div>
@@ -103,45 +109,15 @@ export default async function GreaseTrapCleaningPage() {
         </Card>
       ) : null}
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Launch metros</h2>
-          <p className="text-sm text-muted-foreground">{metros.length} metros</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {metros.length === 0
-            ? Array.from({ length: 6 }).map((_, index) => (
-                <Card key={`skeleton-${index}`}>
-                  <CardHeader>
-                    <Skeleton className="h-5 w-32" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-40" />
-                  </CardContent>
-                </Card>
-              ))
-            : metros.map((metro) => (
-                <Card key={metro.id} className="transition hover:border-primary/40">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{metro.name}</CardTitle>
-                    <Badge className="mt-2 w-fit" variant="outline">
-                      {metro.state}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Explore providers</span>
-                    <Link
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
-                      href={`/grease-trap-cleaning/${metro.state.toLowerCase()}/${metro.slug}`}
-                    >
-                      View
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
-        </div>
-      </section>
+      {metros.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            No metros found.
+          </CardContent>
+        </Card>
+      ) : (
+        <MetroDirectoryClient metros={metros} initialQuery={queryParam ?? ""} />
+      )}
     </main>
   );
 }

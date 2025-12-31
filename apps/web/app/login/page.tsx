@@ -50,7 +50,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace("/admin");
+    router.replace("/post-login");
   };
 
   const handleSignUp = async () => {
@@ -75,7 +75,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace("/admin");
+    router.replace("/post-login");
   };
 
   return (
@@ -83,11 +83,13 @@ export default function LoginPage() {
       <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="space-y-5">
           <Badge className="w-fit" variant="secondary">
-            Admin Access
+            Account Access
           </Badge>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Manage Fogforge listings</h1>
+          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            Sign in to manage your listing
+          </h1>
           <p className="text-sm text-muted-foreground md:text-base">
-            Sign in to import providers, review lead delivery, and keep your directory fresh.
+            Providers can manage their profiles and leads. Admins can manage the full directory.
           </p>
           <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -96,7 +98,7 @@ export default function LoginPage() {
             </div>
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
-              Admin-only tools
+              Provider & admin tools
             </div>
           </div>
           <Button asChild variant="outline">
@@ -109,7 +111,7 @@ export default function LoginPage() {
 
         <Card className="border-border shadow-sm">
           <CardHeader>
-            <CardTitle>Fogforge Admin</CardTitle>
+            <CardTitle>Fogforge Login</CardTitle>
             <CardDescription>Sign in or create an account.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -120,7 +122,7 @@ export default function LoginPage() {
                 </AlertDescription>
                 <div className="mt-3">
                   <Button asChild size="sm">
-                    <Link href="/admin/import/providers">Go to provider import</Link>
+                    <Link href="/post-login">Continue</Link>
                   </Button>
                 </div>
               </Alert>

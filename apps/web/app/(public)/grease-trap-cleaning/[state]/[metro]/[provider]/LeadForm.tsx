@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useFormState } from "react-dom";
-import { ShieldCheck } from "lucide-react";
+import { useFormState, useFormStatus } from "react-dom";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription } from "../../../../../../components/ui/alert";
 import { Button } from "../../../../../../components/ui/button";
 import { Input } from "../../../../../../components/ui/input";
 import { Separator } from "../../../../../../components/ui/separator";
 import { submitLeadAction } from "./actions";
+import { createBrowserClient } from "../../../../../../lib/supabase/browser";
 
 type LeadFormProps = {
   providerId: string;
@@ -20,10 +21,21 @@ const initialState = {
   message: "",
 };
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? "Submitting..." : "Request a Quote"}
+    </Button>
+  );
+}
+
 export default function LeadForm({ providerId, categoryId, metroId }: LeadFormProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
   const [state, formAction] = useFormState(submitLeadAction, initialState);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     setSourceUrl(window.location.href);
@@ -34,6 +46,28 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
       formRef.current?.reset();
     }
   }, [state.ok]);
+
+  useEffect(() => {
+    const fetchAdmin = async () => {
+      const supabase = createBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      const { data } = await supabase
+        .schema("public")
+        .from("admins")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      setIsAdmin(Boolean(data));
+    };
+
+    fetchAdmin();
+  }, []);
 
   return (
     <form ref={formRef} action={formAction} className="space-y-4">
@@ -91,14 +125,23 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
           }
         >
           <AlertDescription className={state.ok ? "text-emerald-900" : "text-rose-900"}>
-            {state.message}
+            <div className="space-y-2">
+              <div>{state.message}</div>
+              {state.ok && isAdmin ? (
+                <a
+                  className="inline-flex items-center gap-1 text-sm text-emerald-900 underline underline-offset-4"
+                  href="/admin/leads"
+                >
+                  View in Admin
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </a>
+              ) : null}
+            </div>
           </AlertDescription>
         </Alert>
       ) : null}
 
-      <Button type="submit" className="w-full">
-        Request a Quote
-      </Button>
+      <SubmitButton />
       <Separator />
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <ShieldCheck className="h-3.5 w-3.5 text-primary" />

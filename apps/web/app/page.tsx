@@ -50,7 +50,7 @@ export default function HomePage() {
               <Link href="/grease-trap-cleaning">Find providers</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/login">List your business</Link>
+              <Link href="/onboarding">List your business</Link>
             </Button>
           </div>
         </div>
