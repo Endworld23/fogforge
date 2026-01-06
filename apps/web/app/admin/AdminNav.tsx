@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Inbox, UploadCloud, LayoutDashboard } from "lucide-react";
+import { Activity, Building2, Inbox, UploadCloud, LayoutDashboard } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
 
@@ -10,6 +10,8 @@ const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/import/providers", label: "Import Providers", icon: UploadCloud },
   { href: "/admin/leads", label: "Leads Inbox", icon: Inbox },
+  { href: "/admin/providers", label: "Providers", icon: Building2 },
+  { href: "/admin/activity", label: "Activity", icon: Activity },
 ];
 
 export default function AdminNav() {

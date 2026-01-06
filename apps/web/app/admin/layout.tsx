@@ -2,16 +2,20 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
-import { isAdminServer } from "../../lib/auth/isAdminServer";
+import { getUserContext } from "../../lib/auth/getUserContext";
 import AdminNav from "./AdminNav";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const isAdmin = await isAdminServer();
+  const { user, isAdmin } = await getUserContext();
+
+  if (!user) {
+    redirect("/login");
+  }
 
   if (!isAdmin) {
-    redirect("/login");
+    redirect("/");
   }
 
   return (

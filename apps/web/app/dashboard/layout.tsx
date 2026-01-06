@@ -15,8 +15,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     redirect("/login");
   }
 
-  if (!isAdmin && !providerUser) {
-    redirect("/onboarding");
+  if (!providerUser) {
+    redirect("/");
   }
 
   return (
@@ -33,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             Manage your listing, review incoming leads, and keep your profile up to date.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="relative z-10 flex flex-wrap gap-2">
           <Button asChild size="sm" variant="outline">
             <Link href="/dashboard">Overview</Link>
           </Button>

@@ -128,12 +128,14 @@ function scoreMetro(metro: MetroOption, query: string, stateMatches: string[]) {
 export function filterMetros(metros: MetroOption[], query: string, stateFilter: string) {
   const normalized = normalizeQuery(query);
   const stateMatches = getStateMatches(query);
+  const base =
+    stateFilter === "all" ? metros : metros.filter((metro) => metro.state === stateFilter);
 
-  return metros.filter((metro) => {
-    const matchesState = stateFilter === "all" ? true : metro.state === stateFilter;
-    if (!matchesState) return false;
+  if (!normalized) {
+    return base;
+  }
 
-    if (!normalized) return true;
+  const directMatches = base.filter((metro) => {
     const name = normalizeQuery(metro.name);
     const slug = normalizeQuery(metro.slug);
     return (
@@ -142,6 +144,20 @@ export function filterMetros(metros: MetroOption[], query: string, stateFilter: 
       stateMatches.includes(metro.state)
     );
   });
+
+  if (directMatches.length > 0) {
+    return directMatches;
+  }
+
+  let fuzzyBase = base;
+  if (stateFilter === "all" && stateMatches.length > 0) {
+    const narrowed = base.filter((metro) => stateMatches.includes(metro.state));
+    if (narrowed.length > 0) {
+      fuzzyBase = narrowed;
+    }
+  }
+
+  return getMetroSuggestions(fuzzyBase, query, Math.min(8, fuzzyBase.length));
 }
 
 export function getMetroSuggestions(metros: MetroOption[], query: string, limit = 6) {

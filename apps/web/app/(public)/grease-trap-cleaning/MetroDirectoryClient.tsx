@@ -26,13 +26,22 @@ export default function MetroDirectoryClient({
   initialQuery = "",
 }: MetroDirectoryClientProps) {
   const [query, setQuery] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
   useEffect(() => {
     setQuery(initialQuery);
+    setDebouncedQuery(initialQuery);
   }, [initialQuery]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 150);
+    return () => window.clearTimeout(handle);
+  }, [query]);
 
   const states = useMemo(() => {
     const unique = new Set(metros.map((metro) => metro.state));
@@ -47,9 +56,9 @@ export default function MetroDirectoryClient({
     () =>
       getMetroSuggestions(
         stateFilter === "all" ? metros : metros.filter((metro) => metro.state === stateFilter),
-        query
+        debouncedQuery
       ),
-    [metros, query, stateFilter]
+    [metros, debouncedQuery, stateFilter]
   );
   const stateMatches = useMemo(() => getStateMatches(query), [query]);
 
@@ -129,6 +138,18 @@ export default function MetroDirectoryClient({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setStateFilter("all");
+              setQuery("");
+              setIsOpen(false);
+            }}
+          >
+            Browse by state
+          </Button>
           {states.map((state) => (
             <Button
               key={state}

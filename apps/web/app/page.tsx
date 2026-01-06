@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
-import { MapPin, Search, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { MapPin, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import MetroSearch from "../components/site/MetroSearch";
 
 export default function HomePage() {
   return (
@@ -20,13 +21,13 @@ export default function HomePage() {
             Compare vetted providers, request quotes in minutes, and keep your kitchen compliant.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Link
-              className="flex flex-1 items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm"
-              href="/grease-trap-cleaning"
-            >
-              <Search className="h-4 w-4" />
-              Search by metro (ex: Houston)
-            </Link>
+            <MetroSearch
+              className="w-full flex-1"
+              inputClassName="h-11"
+              placeholder="Search by metro (ex: Houston)"
+              showIcon
+              showButton={false}
+            />
             <Button asChild>
               <Link href="/grease-trap-cleaning">Browse metros</Link>
             </Button>

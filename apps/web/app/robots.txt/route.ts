@@ -17,6 +17,7 @@ export async function GET() {
   return new NextResponse(lines.join("\n"), {
     headers: {
       "Content-Type": "text/plain",
+      "Cache-Control": "no-store",
     },
   });
 }

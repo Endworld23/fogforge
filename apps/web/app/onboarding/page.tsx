@@ -12,19 +12,23 @@ export default function OnboardingPage() {
         </Badge>
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">List your business</h1>
         <p className="text-sm text-muted-foreground md:text-base">
-          Tell us about your business and we will connect you to a provider dashboard account.
+          Submit your request to claim or list your business.
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Next steps</CardTitle>
-          <CardDescription>We’ll reach out to verify your listing.</CardDescription>
+          <CardDescription>
+            We’ll verify your information and contact your business.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>1. Email support with your business name, metro, and contact info.</p>
-          <p>2. We will create your provider account and send an invite.</p>
-          <p>3. Once approved, you can manage your profile and leads.</p>
+          <p>2. Next steps: we’ll verify your information and contact your business.</p>
+          <p>
+            3. Once approved, you’ll receive an invite to manage your profile and leads.
+          </p>
           <Button asChild className="mt-2">
             <Link href="/login">Go to login</Link>
           </Button>

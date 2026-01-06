@@ -50,7 +50,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace("/post-login");
+    window.location.assign("/post-login");
   };
 
   const handleSignUp = async () => {
@@ -75,7 +75,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace("/post-login");
+    window.location.assign("/post-login");
   };
 
   return (

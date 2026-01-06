@@ -119,6 +119,18 @@ export default async function GreaseTrapCleaningPage({ searchParams }: GreaseTra
       ) : (
         <MetroDirectoryClient metros={metros} initialQuery={queryParam ?? ""} />
       )}
+
+      <Card className="border-border">
+        <CardContent className="flex flex-col gap-2 py-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+          <span>Don’t see your state or city? Get updates.</span>
+          <a
+            className="text-primary hover:underline"
+            href="mailto:support@fogforge.com?subject=New%20metro%20request&body=Hi%20Fogforge%2C%0A%0APlease%20add%20my%20city%20and%20state%3A%0A%0ACity%3A%0AState%3A%0A%0AThanks!"
+          >
+            Email us
+          </a>
+        </CardContent>
+      </Card>
     </main>
   );
 }

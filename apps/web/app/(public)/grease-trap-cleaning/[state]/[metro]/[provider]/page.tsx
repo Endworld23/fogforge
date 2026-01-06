@@ -112,23 +112,114 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     : null;
 
   if (error || !provider || !provider.metros || !provider.categories) {
+    const providerName = params.provider
+      .split("-")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+    const metroName = params.metro
+      .split("-")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+    const stateLabel = params.state.toUpperCase();
+
     return (
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10">
-        <Card>
-          <CardHeader>
-            <CardTitle>Provider not found</CardTitle>
-            <CardDescription>
-              We couldn't find that listing. Try another provider or metro.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href={`/grease-trap-cleaning/${params.state}/${params.metro}`}>
-                Back to metro
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
+        <header className="space-y-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/grease-trap-cleaning">Grease Trap Cleaning</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  href={`/grease-trap-cleaning/${params.state}/${params.metro}`}
+                >
+                  {metroName}
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{providerName}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <Badge className="w-fit" variant="secondary">
+            Grease Trap Cleaning
+          </Badge>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+              {providerName}
+            </h1>
+            <Badge variant="outline">Unclaimed listing</Badge>
+          </div>
+          <p className="flex items-center gap-2 text-sm text-muted-foreground md:text-base">
+            <MapPin className="h-4 w-4" />
+            {metroName}, {stateLabel}
+          </p>
+        </header>
+
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>About</CardTitle>
+                <CardDescription>
+                  This business has not claimed their listing yet.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-muted-foreground">
+                <p>
+                  Fogforge helps operators connect with trusted grease trap cleaning partners.
+                  Claim this listing to add accurate service details and start receiving leads.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Service area</CardTitle>
+                <CardDescription>
+                  Serving {metroName}, {stateLabel}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Service coverage and response times will appear once the business claims this
+                profile.
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Accreditations</CardTitle>
+                <CardDescription>Pending verification</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Licensing, insurance, and compliance details will be listed here.
+              </CardContent>
+            </Card>
+          </div>
+          <div className="lg:sticky lg:top-24">
+            <Card>
+              <CardHeader>
+                <CardTitle>Claim this business</CardTitle>
+                <CardDescription>
+                  Manage this listing and start receiving qualified leads.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button asChild>
+                  <Link href={`/onboarding?mode=claim&slug=${params.provider}`}>
+                    Claim this business
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/grease-trap-cleaning/${params.state}/${params.metro}`}>
+                    Back to metro
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </main>
     );
   }
