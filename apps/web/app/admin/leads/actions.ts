@@ -18,7 +18,7 @@ export async function markLeadSentAction(leadId: string): Promise<LeadActionResu
     return { ok: false, message: "Not authorized." };
   }
 
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const { data, error } = await supabase
     .schema("public")
     .from("leads")

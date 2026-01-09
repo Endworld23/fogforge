@@ -40,7 +40,7 @@ const siteUrl = getSiteUrl();
 export async function generateMetadata({
   params,
 }: MetroCategoryPageProps): Promise<Metadata> {
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data: metroData } = await supabase
     .schema("public")
     .from("metros")
@@ -80,7 +80,7 @@ export default async function MetroCategoryPage({
   const rangeStart = (page - 1) * PAGE_SIZE;
   const rangeEnd = rangeStart + PAGE_SIZE - 1;
 
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const [{ data: metroData }, { data: categoryData }] = await Promise.all([
     supabase
       .schema("public")

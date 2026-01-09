@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowRight, ShieldCheck, User } from "lucide-react";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Badge } from "../../components/ui/badge";
@@ -13,7 +12,6 @@ import { Separator } from "../../components/ui/separator";
 import { createBrowserClient } from "../../lib/supabase/browser";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -47,31 +45,6 @@ export default function LoginPage() {
 
     if (error) {
       setStatusMessage(error.message);
-      return;
-    }
-
-    window.location.assign("/post-login");
-  };
-
-  const handleSignUp = async () => {
-    setIsLoading(true);
-    setStatusMessage(null);
-
-    const supabase = createBrowserClient();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    setIsLoading(false);
-
-    if (error) {
-      setStatusMessage(error.message);
-      return;
-    }
-
-    if (!data.session) {
-      setStatusMessage("Check your email to confirm your account.");
       return;
     }
 
@@ -112,7 +85,7 @@ export default function LoginPage() {
         <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle>Fogforge Login</CardTitle>
-            <CardDescription>Sign in or create an account.</CardDescription>
+            <CardDescription>Sign in to continue.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {currentUserEmail ? (
@@ -170,21 +143,14 @@ export default function LoginPage() {
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isLoading}
-                  onClick={handleSignUp}
-                >
-                  Create account
-                </Button>
               </div>
             </form>
 
             <Separator />
-            <p className="text-xs text-muted-foreground">
-              Need access? Contact support to verify your admin account.
-            </p>
+            <p className="text-sm font-medium text-foreground">Own a business? Get started</p>
+            <Button asChild variant="outline">
+              <Link href="/get-started">Get started</Link>
+            </Button>
           </CardContent>
         </Card>
       </section>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardHeader } from "../../../components/ui/card";
+import { Card, CardContent } from "../../../components/ui/card";
 import { Separator } from "../../../components/ui/separator";
 import { ShieldCheck } from "lucide-react";
 import { getSiteUrl } from "../../../lib/seo";
@@ -37,7 +37,7 @@ type GreaseTrapCleaningPageProps = {
 };
 
 export default async function GreaseTrapCleaningPage({ searchParams }: GreaseTrapCleaningPageProps) {
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data, error } = await supabase
     .schema("public")
     .from("metros")

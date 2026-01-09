@@ -32,7 +32,7 @@ export async function submitLeadAction(
     return { ok: false, message: "Missing required fields." };
   }
 
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const headerList = await headers();
   const referer = headerList.get("referer") ?? "";
   const resolvedSourceUrl = typeof sourceUrl === "string" ? sourceUrl : referer;

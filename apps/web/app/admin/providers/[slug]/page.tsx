@@ -22,7 +22,7 @@ type ProviderRow = {
 };
 
 export default async function ProviderDetailPage({ params }: ProviderDetailProps) {
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase
     .schema("public")
     .from("providers")

@@ -31,7 +31,7 @@ export default async function AdminLeadsPage() {
     redirect("/login");
   }
 
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data, error } = await supabase
     .schema("public")
     .from("leads")

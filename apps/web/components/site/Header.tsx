@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Building2, LogOut, ShieldCheck, User } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Separator } from "../ui/separator";
 import { cn } from "../../lib/utils";
 import MetroSearch from "./MetroSearch";
-import { createBrowserClient } from "../../lib/supabase/browser";
 
 type HeaderProps = {
   isAuthenticated: boolean;
@@ -72,28 +71,30 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
           </nav>
         </div>
         <div className="flex w-full min-w-0 flex-1 items-center gap-3 md:justify-end">
-          <MetroSearch
-            className="w-full min-w-0 max-w-md"
-            inputClassName="h-9"
-            buttonSize="sm"
-            buttonVariant="outline"
-            showStateMatches={false}
-          />
+          <div className="flex-1 min-w-0">
+            <MetroSearch
+              className="w-full min-w-0 max-w-md"
+              inputClassName="h-9"
+              buttonSize="sm"
+              buttonVariant="outline"
+              showStateMatches={false}
+            />
+          </div>
 
-          <div className="relative" ref={menuRef}>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((prev) => !prev)}
-            >
-              <User className="h-4 w-4" />
-              <span className="sr-only">Account</span>
-            </Button>
-            {menuOpen ? (
-              <Card className="absolute right-0 z-50 mt-2 w-56 border-border bg-background p-2 shadow-lg">
-                {isAuthenticated ? (
+          {isAuthenticated ? (
+            <div className="relative" ref={menuRef}>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((prev) => !prev)}
+              >
+                <User className="h-4 w-4" />
+                <span className="sr-only">Account</span>
+              </Button>
+              {menuOpen ? (
+                <Card className="absolute right-0 z-50 mt-2 w-56 border-border bg-background p-2 shadow-lg">
                   <>
                     <div className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground">
                       <User className="h-4 w-4 text-muted-foreground" />
@@ -137,37 +138,14 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
                       Logout
                     </Link>
                   </>
-                ) : (
-                  <>
-                    <Link
-                      className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground hover:bg-muted"
-                      href="/login"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <User className="h-4 w-4" />
-                      Log in
-                    </Link>
-                    <Link
-                      className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground hover:bg-muted"
-                      href="/onboarding?mode=claim"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <Building2 className="h-4 w-4" />
-                      Claim your business
-                    </Link>
-                    <Link
-                      className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-foreground hover:bg-muted"
-                      href="/onboarding?mode=list"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <Building2 className="h-4 w-4" />
-                      List your business
-                    </Link>
-                  </>
-                )}
-              </Card>
-            ) : null}
-          </div>
+                </Card>
+              ) : null}
+            </div>
+          ) : (
+            <Button asChild variant="outline">
+              <Link href="/login">Sign in</Link>
+            </Button>
+          )}
 
         </div>
       </div>

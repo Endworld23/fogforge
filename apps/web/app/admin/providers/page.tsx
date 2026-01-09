@@ -12,17 +12,8 @@ import {
 } from "../../../components/ui/table";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
 
-type ProviderRow = {
-  id: string;
-  business_name: string;
-  slug: string;
-  status: string;
-  is_published: boolean;
-  provider_users: { user_id: string }[] | null;
-};
-
 export default async function AdminProvidersPage() {
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase
     .schema("public")
     .from("providers")

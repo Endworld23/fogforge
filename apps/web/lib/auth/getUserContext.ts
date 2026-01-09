@@ -7,7 +7,7 @@ export type UserContext = {
 };
 
 export async function getUserContext(): Promise<UserContext> {
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const {
     data: { user },
   } = await supabase.auth.getUser();

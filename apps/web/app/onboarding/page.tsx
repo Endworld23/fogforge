@@ -1,39 +1,55 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { createServerSupabaseReadOnly } from "../../lib/supabase/server";
+import { getUserContext } from "../../lib/auth/getUserContext";
+import OnboardingFlow from "./OnboardingFlow";
 
-export default function OnboardingPage() {
+type OnboardingPageProps = {
+  searchParams?: { mode?: string };
+};
+
+export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
+  const { user } = await getUserContext();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const supabase = await createServerSupabaseReadOnly();
+  const [{ data: claimable }, { data: metros }] = await Promise.all([
+    supabase
+      .schema("public")
+      .from("claimable_providers")
+      .select("id, business_name, city, state")
+      .order("business_name", { ascending: true }),
+    supabase
+      .schema("public")
+      .from("metros")
+      .select("id, name, state")
+      .order("name", { ascending: true }),
+  ]);
+
+  const mode = searchParams?.mode;
+  const initialMode = mode === "claim" || mode === "list" ? mode : undefined;
+
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
       <div className="space-y-3">
         <Badge className="w-fit" variant="secondary">
           Provider Onboarding
         </Badge>
-        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">List your business</h1>
+        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          Request access to Fogforge
+        </h1>
         <p className="text-sm text-muted-foreground md:text-base">
-          Submit your request to claim or list your business.
+          Submit your business details and documentation. We review every request.
         </p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Next steps</CardTitle>
-          <CardDescription>
-            We’ll verify your information and contact your business.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>1. Email support with your business name, metro, and contact info.</p>
-          <p>2. Next steps: we’ll verify your information and contact your business.</p>
-          <p>
-            3. Once approved, you’ll receive an invite to manage your profile and leads.
-          </p>
-          <Button asChild className="mt-2">
-            <Link href="/login">Go to login</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <OnboardingFlow
+        claimableProviders={claimable ?? []}
+        metros={metros ?? []}
+        userEmail={user.email ?? ""}
+        initialMode={initialMode}
+      />
     </main>
   );
 }

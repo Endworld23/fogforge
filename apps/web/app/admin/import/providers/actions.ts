@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient as SBClient } from "@supabase/supabase-js";
 import { slugify } from "../../../../lib/slugify";
 
 type ImportRow = {
@@ -17,6 +17,128 @@ type ImportRow = {
   postal_code?: string;
 };
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+type ProviderRow = {
+  id: string;
+  slug: string;
+  business_name: string;
+  city: string;
+  state: string;
+  metro_id: string;
+  category_id: string;
+  phone: string | null;
+  website_url: string | null;
+  email_public: string | null;
+  description: string | null;
+  street: string | null;
+  postal_code: string | null;
+  is_published: boolean;
+  status: string;
+};
+
+type ProviderInsert = {
+  slug: string;
+  business_name: string;
+  city: string;
+  state: string;
+  metro_id: string;
+  category_id: string;
+  phone?: string | null;
+  website_url?: string | null;
+  email_public?: string | null;
+  description?: string | null;
+  street?: string | null;
+  postal_code?: string | null;
+  is_published: boolean;
+  status: string;
+  is_claimed?: boolean | null;
+  user_id?: string | null;
+};
+
+type ProviderUpdate = {
+  slug?: string;
+  business_name?: string;
+  city?: string;
+  state?: string;
+  metro_id?: string;
+  category_id?: string;
+  phone?: string | null;
+  website_url?: string | null;
+  email_public?: string | null;
+  description?: string | null;
+  street?: string | null;
+  postal_code?: string | null;
+  is_published?: boolean;
+  status?: string;
+  is_claimed?: boolean | null;
+  user_id?: string | null;
+};
+
+type ProviderWriteBase = Pick<
+  ProviderInsert,
+  | "business_name"
+  | "city"
+  | "state"
+  | "metro_id"
+  | "category_id"
+  | "phone"
+  | "website_url"
+  | "email_public"
+  | "description"
+  | "street"
+  | "postal_code"
+>;
+
+type Database = {
+  public: {
+    Tables: {
+      providers: {
+        Row: ProviderRow;
+        Insert: ProviderInsert;
+        Update: ProviderUpdate;
+        Relationships: [];
+      };
+      metros: {
+        Row: { id: string; slug: string };
+        Insert: { id?: string; slug: string };
+        Update: { slug?: string };
+        Relationships: [];
+      };
+      categories: {
+        Row: { id: string; slug: string };
+        Insert: { id?: string; slug: string };
+        Update: { slug?: string };
+        Relationships: [];
+      };
+      admins: {
+        Row: { user_id: string };
+        Insert: { user_id: string };
+        Update: { user_id?: string };
+        Relationships: [];
+      };
+    };
+    Views: Record<
+      string,
+      {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      }
+    >;
+    Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>;
+    Enums: Record<string, string>;
+    CompositeTypes: Record<string, unknown>;
+  };
+};
+
 type ImportResult = {
   ok: boolean;
   message?: string;
@@ -26,37 +148,50 @@ type ImportResult = {
   rowErrors: Array<{ index: number; error: string }>;
 };
 
-function createRlsClient(accessToken: string) {
+type SupabaseClient = SBClient<Database, "public">;
+
+type SelectResult<T> = {
+  data: T | null;
+  error: { message: string } | null;
+};
+
+type MaybeSingleResult<T> = {
+  data: T | null;
+  error: { message: string } | null;
+};
+
+type UserResult = {
+  data: { user: { id: string } | null };
+  error: { message: string } | null;
+};
+
+function createRlsClient(accessToken: string): SupabaseClient {
   const supabaseUrl = process.env.SUPABASE_URL ?? "";
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? "";
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false },
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     },
-  }) as unknown as {
-    from: (table: string) => any;
-    auth: { getUser: () => Promise<any> };
-  };
+  });
 }
 
-async function ensureUniqueSlug(baseSlug: string, supabase: { from: (table: string) => any }) {
+async function ensureUniqueSlug(baseSlug: string, supabase: SupabaseClient) {
   if (!baseSlug) {
     baseSlug = "provider";
   }
-  const { data, error } = await supabase
+  const { data, error } = (await supabase
     .from("providers")
     .select("slug")
-    .like("slug", `${baseSlug}%`);
+    .like("slug", `${baseSlug}%`)) as SelectResult<Array<{ slug: string }>>;
 
   if (error || !data) {
     return baseSlug;
   }
 
-  const rows = (data ?? []) as Array<{ slug: string }>;
-  const existing = new Set(rows.map((row) => row.slug));
+  const existing = new Set(data.map((row) => row.slug));
   if (!existing.has(baseSlug)) {
     return baseSlug;
   }
@@ -68,17 +203,23 @@ async function ensureUniqueSlug(baseSlug: string, supabase: { from: (table: stri
   return `${baseSlug}-${counter}`;
 }
 
-async function resolveLookupIds(supabase: { from: (table: string) => any }, rows: ImportRow[]) {
+async function resolveLookupIds(supabase: SupabaseClient, rows: ImportRow[]) {
   const metroSlugs = Array.from(new Set(rows.map((row) => row.metro_slug)));
   const categorySlugs = Array.from(new Set(rows.map((row) => row.category)));
 
-  const [{ data: metros }, { data: categories }] = await Promise.all([
+  const [
+    { data: metros },
+    { data: categories },
+  ] = (await Promise.all([
     supabase.from("metros").select("id, slug").in("slug", metroSlugs),
     supabase.from("categories").select("id, slug").in("slug", categorySlugs),
-  ]);
+  ])) as [
+    SelectResult<Array<{ id: string; slug: string }>>,
+    SelectResult<Array<{ id: string; slug: string }>>
+  ];
 
-  const metroRows = (metros ?? []) as Array<{ id: string; slug: string }>;
-  const categoryRows = (categories ?? []) as Array<{ id: string; slug: string }>;
+  const metroRows = metros ?? [];
+  const categoryRows = categories ?? [];
   const metroMap = new Map(metroRows.map((metro) => [metro.slug, metro.id]));
   const categoryMap = new Map(categoryRows.map((category) => [category.slug, category.id]));
 
@@ -86,38 +227,38 @@ async function resolveLookupIds(supabase: { from: (table: string) => any }, rows
 }
 
 async function applyUpsert(
-  supabase: { from: (table: string) => any },
+  supabase: SupabaseClient,
   row: ImportRow,
   metroId: string,
   categoryId: string
 ) {
   const baseSlug = slugify(`${row.business_name}-${row.city}-${row.state}`);
-  const { data: slugMatch } = await supabase
+  const { data: slugMatch } = (await supabase
     .from("providers")
     .select("id, slug")
     .eq("slug", baseSlug)
-    .maybeSingle();
-  const slugRow = (slugMatch ?? null) as { id: string; slug: string } | null;
+    .maybeSingle()) as MaybeSingleResult<{ id: string; slug: string }>;
 
-  const payload = {
+  const baseWrite: ProviderWriteBase = {
     business_name: row.business_name,
     city: row.city,
     state: row.state,
     metro_id: metroId,
     category_id: categoryId,
-    phone: row.phone || null,
-    website_url: row.website_url || null,
-    email_public: row.email_public || null,
-    description: row.description || null,
-    street: row.street || null,
-    postal_code: row.postal_code || null,
+    phone: row.phone ?? null,
+    website_url: row.website_url ?? null,
+    email_public: row.email_public ?? null,
+    description: row.description ?? null,
+    street: row.street ?? null,
+    postal_code: row.postal_code ?? null,
   };
+  const updatePayload: ProviderUpdate = baseWrite;
 
-  if (slugRow?.id) {
+  if (slugMatch?.id) {
     const { error } = await supabase
       .from("providers")
-      .update(payload as Record<string, unknown>)
-      .eq("id", slugRow.id);
+      .update(updatePayload)
+      .eq("id", slugMatch.id);
     if (error) {
       return { status: "failed" as const, error: error.message };
     }
@@ -125,21 +266,20 @@ async function applyUpsert(
   }
 
   if (row.phone) {
-    const { data: phoneMatch } = await supabase
+    const { data: phoneMatch } = (await supabase
       .from("providers")
       .select("id, slug")
       .eq("business_name", row.business_name)
       .eq("phone", row.phone)
       .eq("city", row.city)
       .eq("state", row.state)
-      .maybeSingle();
-    const phoneRow = (phoneMatch ?? null) as { id: string; slug: string } | null;
+      .maybeSingle()) as MaybeSingleResult<{ id: string; slug: string }>;
 
-    if (phoneRow?.id) {
+    if (phoneMatch?.id) {
       const { error } = await supabase
         .from("providers")
-        .update(payload as Record<string, unknown>)
-        .eq("id", phoneRow.id);
+        .update(updatePayload)
+        .eq("id", phoneMatch.id);
       if (error) {
         return { status: "failed" as const, error: error.message };
       }
@@ -148,12 +288,13 @@ async function applyUpsert(
   }
 
   const uniqueSlug = await ensureUniqueSlug(baseSlug, supabase);
-  const { error } = await supabase.from("providers").insert({
-    ...(payload as Record<string, unknown>),
+  const insertPayload: ProviderInsert = {
+    ...baseWrite,
     slug: uniqueSlug,
     is_published: true,
     status: "active",
-  });
+  };
+  const { error } = await supabase.from("providers").insert(insertPayload);
 
   if (error) {
     return { status: "failed" as const, error: error.message };
@@ -179,7 +320,8 @@ export async function importProvidersAction(formData: FormData): Promise<ImportR
 
   const rows = JSON.parse(payload) as ImportRow[];
   const supabase = createRlsClient(accessToken);
-  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const { data: userData, error: userError } =
+    (await supabase.auth.getUser()) as UserResult;
 
   if (userError || !userData.user) {
     return {
@@ -192,11 +334,11 @@ export async function importProvidersAction(formData: FormData): Promise<ImportR
     };
   }
 
-  const { data: adminRow, error: adminError } = await supabase
+  const { data: adminRow, error: adminError } = (await supabase
     .from("admins")
     .select("user_id")
     .eq("user_id", userData.user.id)
-    .maybeSingle();
+    .maybeSingle()) as MaybeSingleResult<{ user_id: string }>;
 
   if (adminError || !adminRow) {
     return {

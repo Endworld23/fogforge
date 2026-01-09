@@ -45,7 +45,7 @@ const siteUrl = getSiteUrl();
 export async function generateMetadata({
   params,
 }: ProviderPageProps): Promise<Metadata> {
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase
     .schema("public")
     .from("providers")
@@ -82,7 +82,7 @@ export async function generateMetadata({
 }
 
 export default async function ProviderDetailPage({ params }: ProviderPageProps) {
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data, error } = await supabase
     .schema("public")
     .from("providers")
@@ -326,7 +326,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
             <CardHeader>
               <CardTitle>Request a Quote</CardTitle>
               <CardDescription>
-                Tell us a bit about your needs and we'll send your request to the provider.
+                Tell us a bit about your needs and we&apos;ll send your request to the provider.
               </CardDescription>
             </CardHeader>
             <CardContent>

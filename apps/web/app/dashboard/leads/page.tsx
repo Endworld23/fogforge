@@ -49,7 +49,7 @@ export default async function DashboardLeadsPage() {
     return null;
   }
 
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const providerId = providerUser.provider_id;
 
   const { data } = await supabase

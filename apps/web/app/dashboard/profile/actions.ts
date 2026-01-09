@@ -18,7 +18,7 @@ export async function updateProviderProfileAction(
   _prevState: UpdateResult,
   formData: FormData
 ): Promise<UpdateResult> {
-  const supabase = createServerSupabase();
+  const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   }
 
   if (!providerUser) {
-    redirect("/");
+    redirect("/onboarding/status");
   }
 
   return (

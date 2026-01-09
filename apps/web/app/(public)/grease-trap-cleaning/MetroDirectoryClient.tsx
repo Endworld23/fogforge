@@ -134,7 +134,7 @@ export default function MetroDirectoryClient({
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
-            Filter by metro name or choose a state. Try "TX" or "Texas".
+            Filter by metro name or choose a state. Try &quot;TX&quot; or &quot;Texas&quot;.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

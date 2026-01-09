@@ -30,7 +30,7 @@ export default async function DashboardProfilePage() {
     return null;
   }
 
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data: provider } = await supabase
     .schema("public")
     .from("providers")

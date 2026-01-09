@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseReadOnly } from "../../lib/supabase/server";
 import { getSiteUrl } from "../../lib/seo";
 
+export const runtime = "nodejs";
+
 function buildUrl(baseUrl: string, path: string) {
   return `${baseUrl}${path}`;
 }
@@ -16,7 +18,7 @@ export async function GET() {
     });
   }
 
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const [{ data: metros }, { data: providers }] = await Promise.all([
     supabase.schema("public").from("metros").select("slug, state"),
     supabase

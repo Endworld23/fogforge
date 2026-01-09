@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 async function handleLogout(request: Request) {
   const url = new URL(request.url);
   console.info("logout request", request.method, url.pathname);
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const response = NextResponse.redirect(new URL("/post-logout", request.url), 303);
   response.headers.set("X-FF-LOGOUT", "1");
   response.headers.set("Cache-Control", "no-store");

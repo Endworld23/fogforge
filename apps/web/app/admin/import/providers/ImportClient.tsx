@@ -42,14 +42,6 @@ type ActionState = {
   rowErrors: Array<{ index: number; error: string }>;
 };
 
-const initialState: ActionState = {
-  ok: false,
-  inserted: 0,
-  updated: 0,
-  failed: 0,
-  rowErrors: [],
-};
-
 function parseCsv(text: string) {
   const rows: string[][] = [];
   let current: string[] = [];
