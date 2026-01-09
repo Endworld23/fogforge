@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import {
@@ -43,12 +44,10 @@ export default async function AdminProvidersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight">Providers</h2>
-        <p className="text-sm text-muted-foreground">
-          Track verified providers and follow up with unclaimed listings.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Providers"
+        description="Track verified providers and follow up with unclaimed listings."
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

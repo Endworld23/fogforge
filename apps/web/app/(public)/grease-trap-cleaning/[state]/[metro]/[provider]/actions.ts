@@ -33,7 +33,8 @@ export async function submitLeadAction(
   }
 
   const supabase = createServerSupabase();
-  const referer = headers().get("referer") ?? "";
+  const headerList = await headers();
+  const referer = headerList.get("referer") ?? "";
   const resolvedSourceUrl = typeof sourceUrl === "string" ? sourceUrl : referer;
 
   const { data: leadRow, error } = await supabase

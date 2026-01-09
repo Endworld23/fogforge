@@ -1,3 +1,4 @@
+import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import {
@@ -11,7 +12,7 @@ import {
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
 
 export default async function ActivityPage() {
-  const supabase = createServerSupabaseReadOnly();
+  const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase
     .schema("public")
     .from("providers")
@@ -28,12 +29,10 @@ export default async function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight">Activity</h2>
-        <p className="text-sm text-muted-foreground">
-          Coming soon: real usage insights for provider accounts.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Activity"
+        description="Coming soon: real usage insights for provider accounts."
+      />
 
       <Card>
         <CardHeader>

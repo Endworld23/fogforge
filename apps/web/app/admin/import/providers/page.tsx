@@ -1,7 +1,8 @@
-import { isAdminServer } from "../../../../lib/auth/isAdminServer";
-import ImportClient from "./ImportClient";
+import AdminPageHeader from "../../../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
+import { isAdminServer } from "../../../../lib/auth/isAdminServer";
+import ImportClient from "./ImportClient";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +25,15 @@ export default async function AdminProviderImportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Badge className="w-fit" variant="secondary">
-          Launch Imports
-        </Badge>
-        <h2 className="text-2xl font-semibold text-foreground">Import Providers</h2>
-        <p className="text-sm text-muted-foreground">
-          Upload CSVs to seed launch metros with vetted providers.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Import Providers"
+        description="Upload CSVs to seed launch metros with vetted providers."
+        action={
+          <Badge className="w-fit" variant="secondary">
+            Launch Imports
+          </Badge>
+        }
+      />
       <ImportClient />
     </div>
   );

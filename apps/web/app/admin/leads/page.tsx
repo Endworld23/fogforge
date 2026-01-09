@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { Alert, AlertDescription, AlertTitle } from "../../../components/ui/alert";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -73,15 +74,11 @@ export default async function AdminLeadsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold text-foreground">Leads Inbox</h2>
-          <p className="text-sm text-muted-foreground">
-            Track incoming requests and delivery status in real time.
-          </p>
-        </div>
-        <Badge variant="secondary">{leads.length} leads</Badge>
-      </div>
+      <AdminPageHeader
+        title="Leads Inbox"
+        description="Track incoming requests and delivery status in real time."
+        action={<Badge variant="secondary">{leads.length} leads</Badge>}
+      />
 
       {error ? (
         <Alert variant="destructive">
