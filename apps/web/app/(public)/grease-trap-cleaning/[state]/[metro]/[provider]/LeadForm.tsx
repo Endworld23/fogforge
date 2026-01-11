@@ -116,12 +116,14 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
             Name
           </label>
           <Input id="name" name="name" required />
+          <p className="text-xs text-muted-foreground">We use this to personalize your request.</p>
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground" htmlFor="email">
             Email
           </label>
           <Input id="email" name="email" type="email" required />
+          <p className="text-xs text-muted-foreground">Required so the provider can reply.</p>
         </div>
       </div>
 
@@ -151,10 +153,8 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
       </div>
 
       {state.message && !state.ok ? (
-        <Alert
-          className="border-rose-200 bg-rose-50 text-rose-900"
-        >
-          <AlertDescription className="text-rose-900">
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+          <AlertDescription className="text-amber-900">
             {state.message}
           </AlertDescription>
         </Alert>

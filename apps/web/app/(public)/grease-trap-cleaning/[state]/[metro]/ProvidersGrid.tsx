@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, ShieldCheck } from "lucide-react";
 import { Badge } from "../../../../../components/ui/badge";
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { Input } from "../../../../../components/ui/input";
+import { isProviderVerified } from "../../../../../lib/public/verified";
 
 type ProviderRow = {
   id: string;
@@ -21,22 +23,46 @@ type ProviderRow = {
 
 type ProvidersGridProps = {
   providers: ProviderRow[];
+  totalCount: number;
   state: string;
   metro: string;
 };
 
-export default function ProvidersGrid({ providers, state, metro }: ProvidersGridProps) {
-  const [query, setQuery] = useState("");
+export default function ProvidersGrid({
+  providers,
+  totalCount,
+  state,
+  metro,
+}: ProvidersGridProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
+  const urlQuery = searchParams.get("q") ?? "";
+  const [query, setQuery] = useState(urlQuery);
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return providers;
-    return providers.filter((provider) => {
-      const name = provider.business_name.toLowerCase();
-      const slug = provider.slug.toLowerCase();
-      return name.includes(normalized) || slug.includes(normalized);
-    });
-  }, [providers, query]);
+  useEffect(() => {
+    if (urlQuery !== query) {
+      setQuery(urlQuery);
+    }
+  }, [urlQuery, query]);
+
+  useEffect(() => {
+    if (query === urlQuery) return;
+    const handle = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParamsString);
+      if (query.trim()) {
+        params.set("q", query.trim());
+      } else {
+        params.delete("q");
+      }
+      params.delete("page");
+      const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      router.replace(nextUrl);
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [query, urlQuery, pathname, router, searchParamsString]);
 
   const handleClearSearch = () => setQuery("");
 
@@ -53,14 +79,14 @@ export default function ProvidersGrid({ providers, state, metro }: ProvidersGrid
           />
         </div>
         <Badge variant="outline">
-          {filtered.length} provider{filtered.length === 1 ? "" : "s"}
+          {totalCount} provider{totalCount === 1 ? "" : "s"}
         </Badge>
       </div>
 
-      {filtered.length === 0 ? (
+      {providers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center text-sm text-muted-foreground">
-            <p>No results match your search.</p>
+            <p>No results match your search in this metro.</p>
             <Button type="button" variant="outline" onClick={handleClearSearch}>
               Clear search
             </Button>
@@ -68,8 +94,8 @@ export default function ProvidersGrid({ providers, state, metro }: ProvidersGrid
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((provider) => {
-            const isVerified = Boolean(provider.phone || provider.website_url);
+          {providers.map((provider) => {
+            const isVerified = isProviderVerified(provider);
             const locationLabel =
               provider.city && provider.state
                 ? `${provider.city}, ${provider.state}`

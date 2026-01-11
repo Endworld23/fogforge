@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,6 +20,7 @@ import {
 } from "../../../../../../components/ui/card";
 import { Separator } from "../../../../../../components/ui/separator";
 import { Globe, MapPin, Phone, ShieldCheck } from "lucide-react";
+import { isProviderVerified } from "../../../../../../lib/public/verified";
 import { createServerSupabaseReadOnly } from "../../../../../../lib/supabase/server";
 import { getSiteUrl } from "../../../../../../lib/seo";
 import LeadForm from "./LeadForm";
@@ -227,7 +229,13 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
   }
 
   const categoryLabel = provider.categories?.name ?? "Grease Trap Cleaning";
-  const isVerified = Boolean(provider.phone || provider.website_url);
+  const isVerified = isProviderVerified(provider);
+  const locationLabel =
+    provider.city && provider.state ? `${provider.city}, ${provider.state}` : "Location not set";
+
+  if (!provider.is_published) {
+    notFound();
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
@@ -262,12 +270,10 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
           </div>
           <p className="flex items-center gap-2 text-sm text-muted-foreground md:text-base">
             <MapPin className="h-4 w-4" />
-            {provider.city}, {provider.state}
+            {locationLabel}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={provider.is_published ? "secondary" : "outline"}>
-              {provider.is_published ? "Published" : "Draft"}
-            </Badge>
+            <Badge variant="secondary">Published</Badge>
             {isVerified ? (
               <Badge variant="outline" className="flex items-center gap-1">
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -284,7 +290,9 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
                 Call {provider.phone}
               </a>
             </Button>
-          ) : null}
+          ) : (
+            <span className="text-sm text-muted-foreground">Phone: Not listed</span>
+          )}
           {provider.website_url ? (
             <Button variant="outline" asChild>
               <a
@@ -297,7 +305,9 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
                 Visit website
               </a>
             </Button>
-          ) : null}
+          ) : (
+            <span className="text-sm text-muted-foreground">Website: Not listed</span>
+          )}
         </div>
       </header>
 
@@ -349,6 +359,18 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
                 categoryId={provider.categories.id}
                 metroId={provider.metros.id}
               />
+              <Card className="border-border/70 bg-muted/40">
+                <CardHeader>
+                  <CardTitle className="text-base">Quick facts</CardTitle>
+                  <CardDescription>Helpful details at a glance.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>Phone listed: {provider.phone ? "Yes" : "No"}</p>
+                  <p>Website listed: {provider.website_url ? "Yes" : "No"}</p>
+                  <p>Location: {locationLabel}</p>
+                  <p>Category: {categoryLabel}</p>
+                </CardContent>
+              </Card>
               <Separator />
               <div className="space-y-3 text-sm text-muted-foreground">
                 <p className="text-sm font-semibold text-foreground">What happens next</p>

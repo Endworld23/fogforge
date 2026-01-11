@@ -22,7 +22,7 @@ const PAGE_SIZE = 20;
 
 type MetroCategoryPageProps = {
   params: { state: string; metro: string };
-  searchParams?: { page?: string | string[] };
+  searchParams?: { page?: string | string[]; q?: string | string[] };
 };
 
 type ProviderRow = {
@@ -77,9 +77,12 @@ export default async function MetroCategoryPage({
   const pageParam = Array.isArray(searchParams?.page)
     ? searchParams?.page[0]
     : searchParams?.page;
+  const queryParam = Array.isArray(searchParams?.q) ? searchParams?.q[0] : searchParams?.q;
+  const searchQuery = queryParam?.trim() ?? "";
+  const isSearching = searchQuery.length > 0;
   const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
-  const rangeStart = (page - 1) * PAGE_SIZE;
-  const rangeEnd = rangeStart + PAGE_SIZE - 1;
+  const rangeStart = isSearching ? 0 : (page - 1) * PAGE_SIZE;
+  const rangeEnd = isSearching ? 49 : rangeStart + PAGE_SIZE - 1;
 
   const supabase = await createServerSupabaseReadOnly();
   const [{ data: metroData }, { data: categoryData }] = await Promise.all([
@@ -100,18 +103,27 @@ export default async function MetroCategoryPage({
   const metroId = metroData?.id ?? null;
   const categoryId = categoryData?.id ?? null;
   const { data, error, count } = metroId && categoryId
-    ? await supabase
-        .schema("public")
-        .from("providers")
-        .select("id, slug, business_name, city, state, phone, website_url, description", {
-          count: "exact",
-        })
-        .eq("metro_id", metroId)
-        .eq("category_id", categoryId)
-        .eq("is_published", true)
-        .eq("status", "active")
-        .order("business_name", { ascending: true })
-        .range(rangeStart, rangeEnd)
+    ? await (() => {
+        let query = supabase
+          .schema("public")
+          .from("providers")
+          .select("id, slug, business_name, city, state, phone, website_url, description", {
+            count: "exact",
+          })
+          .eq("metro_id", metroId)
+          .eq("category_id", categoryId)
+          .eq("is_published", true)
+          .eq("status", "active")
+          .order("business_name", { ascending: true });
+
+        if (isSearching) {
+          query = query.or(
+            `business_name.ilike.%${searchQuery}%,slug.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`
+          );
+        }
+
+        return query.range(rangeStart, rangeEnd);
+      })()
     : { data: [], error: null, count: 0 };
 
   const providers: ProviderRow[] = (data ?? []).map((provider) => ({
@@ -131,6 +143,14 @@ export default async function MetroCategoryPage({
   const metroName = metroData?.name ?? params.metro.replace(/-/g, " ");
   const metroState = metroData?.state ?? params.state.toUpperCase();
   const categoryName = categoryData?.name ?? "Grease Trap Cleaning";
+  const buildPageHref = (pageNumber: number) => {
+    const params = new URLSearchParams();
+    if (searchQuery) {
+      params.set("q", searchQuery);
+    }
+    params.set("page", pageNumber.toString());
+    return `?${params.toString()}`;
+  };
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
@@ -167,17 +187,22 @@ export default async function MetroCategoryPage({
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr] lg:items-start">
         <div className="space-y-6">
-          {providers.length === 0 && !error ? (
+          {!isSearching && providers.length === 0 && !error ? (
             <Card>
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
                 No providers are listed for this metro yet. Check back soon or browse nearby metros.
               </CardContent>
             </Card>
           ) : (
-            <ProvidersGrid providers={providers} state={params.state} metro={params.metro} />
+            <ProvidersGrid
+              providers={providers}
+              totalCount={totalCount}
+              state={params.state}
+              metro={params.metro}
+            />
           )}
 
-          {totalPages > 1 ? (
+          {totalPages > 1 && !isSearching ? (
             <nav className="flex flex-wrap items-center justify-between gap-3 text-sm md:justify-end">
               <span className="text-muted-foreground">
                 Page {page} of {totalPages}
@@ -186,7 +211,7 @@ export default async function MetroCategoryPage({
                 <Button asChild variant="outline" size="sm" disabled={!hasPrev}>
                   <Link
                     className={cn(!hasPrev && "pointer-events-none")}
-                    href={`?page=${page - 1}`}
+                    href={buildPageHref(page - 1)}
                     aria-disabled={!hasPrev}
                   >
                     Prev
@@ -202,14 +227,14 @@ export default async function MetroCategoryPage({
                       variant={isActive ? "default" : "outline"}
                       size="sm"
                     >
-                      <Link href={`?page=${pageNumber}`}>{pageNumber}</Link>
+                      <Link href={buildPageHref(pageNumber)}>{pageNumber}</Link>
                     </Button>
                   );
                 })}
                 <Button asChild variant="outline" size="sm" disabled={!hasNext}>
                   <Link
                     className={cn(!hasNext && "pointer-events-none")}
-                    href={`?page=${page + 1}`}
+                    href={buildPageHref(page + 1)}
                     aria-disabled={!hasNext}
                   >
                     Next
