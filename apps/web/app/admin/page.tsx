@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Activity, ArrowRight, Building2, Inbox, UploadCloud } from "lucide-react";
+import AdminPageHeader from "../../components/admin/AdminPageHeader";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -7,15 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold text-foreground">Overview</h2>
-          <p className="text-sm text-muted-foreground">
-            Quick links to manage new listings and incoming leads.
-          </p>
-        </div>
-        <Badge variant="secondary">Admin tools</Badge>
-      </div>
+      <AdminPageHeader
+        title="Overview"
+        description="Quick links to manage new listings and incoming leads."
+        action={<Badge variant="secondary">Admin tools</Badge>}
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-border">

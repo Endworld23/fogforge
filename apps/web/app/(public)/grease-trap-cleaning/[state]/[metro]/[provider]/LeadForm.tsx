@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription } from "../../../../../../components/ui/alert";
 import { Button } from "../../../../../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../../../components/ui/card";
 import { Input } from "../../../../../../components/ui/input";
-import { Separator } from "../../../../../../components/ui/separator";
 import { submitLeadAction } from "./actions";
 import { createBrowserClient } from "../../../../../../lib/supabase/browser";
 
@@ -26,7 +26,7 @@ function SubmitButton() {
 
   return (
     <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? "Submitting..." : "Request a Quote"}
+      {pending ? "Sending..." : "Request a Quote"}
     </Button>
   );
 }
@@ -36,6 +36,7 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
   const [sourceUrl, setSourceUrl] = useState("");
   const [state, formAction] = useFormState(submitLeadAction, initialState);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     setSourceUrl(window.location.href);
@@ -43,9 +44,10 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
 
   useEffect(() => {
     if (state.ok) {
+      setShowSuccess(true);
       formRef.current?.reset();
     }
-  }, [state.ok]);
+  }, [state]);
 
   useEffect(() => {
     const fetchAdmin = async () => {
@@ -69,8 +71,40 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
     fetchAdmin();
   }, []);
 
+  if (showSuccess) {
+    return (
+      <Card className="border-emerald-200 bg-emerald-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-emerald-900">
+            <CheckCircle2 className="h-5 w-5" />
+            Request sent
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-emerald-900">
+          <p>{state.message || "Your request is on the way to this provider."}</p>
+          {isAdmin ? (
+            <a
+              className="inline-flex items-center gap-1 text-sm text-emerald-900 underline underline-offset-4"
+              href="/admin/leads"
+            >
+              View in Admin
+              <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowSuccess(false)}
+          >
+            Send another request
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <form ref={formRef} action={formAction} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-5">
       <input type="hidden" name="providerId" value={providerId} />
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="metroId" value={metroId} />
@@ -97,7 +131,7 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
         </label>
         <Input id="phone" name="phone" />
         <p className="text-xs text-muted-foreground">
-          Optional, but helpful if you prefer a callback.
+          Helpful if you prefer a callback or text follow-up.
         </p>
       </div>
 
@@ -116,36 +150,20 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
         </p>
       </div>
 
-      {state.message ? (
+      {state.message && !state.ok ? (
         <Alert
-          className={
-            state.ok
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-rose-200 bg-rose-50 text-rose-900"
-          }
+          className="border-rose-200 bg-rose-50 text-rose-900"
         >
-          <AlertDescription className={state.ok ? "text-emerald-900" : "text-rose-900"}>
-            <div className="space-y-2">
-              <div>{state.message}</div>
-              {state.ok && isAdmin ? (
-                <a
-                  className="inline-flex items-center gap-1 text-sm text-emerald-900 underline underline-offset-4"
-                  href="/admin/leads"
-                >
-                  View in Admin
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </a>
-              ) : null}
-            </div>
+          <AlertDescription className="text-rose-900">
+            {state.message}
           </AlertDescription>
         </Alert>
       ) : null}
 
       <SubmitButton />
-      <Separator />
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-        By submitting, you agree to share your contact details with this provider.
+        We’ll only share your info with this provider.
       </p>
     </form>
   );

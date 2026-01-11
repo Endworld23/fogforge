@@ -16,7 +16,7 @@ import { MapPin, ShieldCheck } from "lucide-react";
 import { createServerSupabaseReadOnly } from "../../../../../lib/supabase/server";
 import { cn } from "../../../../../lib/utils";
 import { getSiteUrl } from "../../../../../lib/seo";
-import ProviderResults from "./ProviderResults";
+import ProvidersGrid from "./ProvidersGrid";
 
 const PAGE_SIZE = 20;
 
@@ -33,6 +33,7 @@ type ProviderRow = {
   state: string;
   phone: string | null;
   website_url: string | null;
+  description: string | null;
 };
 
 const siteUrl = getSiteUrl();
@@ -85,13 +86,13 @@ export default async function MetroCategoryPage({
     supabase
       .schema("public")
       .from("metros")
-      .select("id, name, slug")
+      .select("id, name, slug, state")
       .eq("slug", params.metro)
       .maybeSingle(),
     supabase
       .schema("public")
       .from("categories")
-      .select("id, slug")
+      .select("id, slug, name")
       .eq("slug", "grease-trap-cleaning")
       .maybeSingle(),
   ]);
@@ -102,7 +103,9 @@ export default async function MetroCategoryPage({
     ? await supabase
         .schema("public")
         .from("providers")
-        .select("id, slug, business_name, city, state, phone, website_url", { count: "exact" })
+        .select("id, slug, business_name, city, state, phone, website_url, description", {
+          count: "exact",
+        })
         .eq("metro_id", metroId)
         .eq("category_id", categoryId)
         .eq("is_published", true)
@@ -119,12 +122,15 @@ export default async function MetroCategoryPage({
     state: provider.state,
     phone: provider.phone ?? null,
     website_url: provider.website_url ?? null,
+    description: provider.description ?? null,
   }));
   const totalCount = count ?? 0;
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / PAGE_SIZE);
   const hasPrev = page > 1;
   const hasNext = totalPages > 0 && page < totalPages;
   const metroName = metroData?.name ?? params.metro.replace(/-/g, " ");
+  const metroState = metroData?.state ?? params.state.toUpperCase();
+  const categoryName = categoryData?.name ?? "Grease Trap Cleaning";
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
@@ -141,13 +147,13 @@ export default async function MetroCategoryPage({
           </BreadcrumbList>
         </Breadcrumb>
         <Badge className="w-fit" variant="secondary">
-          Grease Trap Cleaning
+          {categoryName}
         </Badge>
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-          Grease Trap Cleaning in {metroName}
+          Grease Trap Cleaning in {metroName}, {metroState}
         </h1>
         <p className="text-sm text-muted-foreground md:text-base">
-          Browse {totalCount} trusted providers in this metro.
+          Compare local providers and request a quote in minutes.
         </p>
       </header>
 
@@ -164,11 +170,11 @@ export default async function MetroCategoryPage({
           {providers.length === 0 && !error ? (
             <Card>
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                No providers found for this metro yet. Check back soon or try a nearby area.
+                No providers are listed for this metro yet. Check back soon or browse nearby metros.
               </CardContent>
             </Card>
           ) : (
-            <ProviderResults providers={providers} state={params.state} metro={params.metro} />
+            <ProvidersGrid providers={providers} state={params.state} metro={params.metro} />
           )}
 
           {totalPages > 1 ? (

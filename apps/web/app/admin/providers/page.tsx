@@ -1,16 +1,7 @@
-import Link from "next/link";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
-import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../components/ui/table";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
+import ProvidersTable from "./ProvidersTable";
 
 export default async function AdminProvidersPage() {
   const supabase = await createServerSupabaseReadOnly();
@@ -67,47 +58,7 @@ export default async function AdminProvidersPage() {
           <CardDescription>Click a provider to view details.</CardDescription>
         </CardHeader>
         <CardContent>
-          {providers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No providers yet.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Publish</TableHead>
-                  <TableHead>Account</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {providers.map((provider) => (
-                  <TableRow key={provider.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        href={`/admin/providers/${provider.slug}`}
-                        className="text-foreground hover:underline"
-                      >
-                        {provider.business_name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{provider.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={provider.is_published ? "secondary" : "outline"}>
-                        {provider.is_published ? "Published" : "Draft"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={provider.isVerified ? "secondary" : "outline"}>
-                        {provider.isVerified ? "Verified" : "Unclaimed"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <ProvidersTable providers={providers} />
         </CardContent>
       </Card>
     </div>

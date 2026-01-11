@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { Alert, AlertDescription } from "../../../components/ui/alert";
+import AdminEmptyState from "../../../components/admin/AdminEmptyState";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -79,6 +80,11 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
     });
   }, [localLeads, query, statusFilter]);
 
+  const handleResetFilters = () => {
+    setQuery("");
+    setStatusFilter("all");
+  };
+
   const toggleExpanded = (leadId: string) => {
     setExpanded((prev) =>
       prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId]
@@ -153,6 +159,17 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
         </Alert>
       ) : null}
 
+      {filteredLeads.length === 0 ? (
+        <AdminEmptyState
+          title="No leads found"
+          description="Try adjusting your filters or search query."
+          action={
+            <Button variant="outline" size="sm" onClick={handleResetFilters}>
+              Reset filters
+            </Button>
+          }
+        />
+      ) : (
       <Table>
         <TableHeader>
           <TableRow>
@@ -169,18 +186,11 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredLeads.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={10} className="text-center text-sm text-muted-foreground">
-                No leads match this filter.
-              </TableCell>
-            </TableRow>
-          ) : (
-            filteredLeads.map((lead) => {
-              const isExpanded = expanded.includes(lead.id);
-              return (
-                <Fragment key={lead.id}>
-                  <TableRow key={lead.id}>
+          {filteredLeads.map((lead) => {
+            const isExpanded = expanded.includes(lead.id);
+            return (
+              <Fragment key={lead.id}>
+                <TableRow key={lead.id}>
                     <TableCell>
                       {new Date(lead.created_at).toLocaleString()}
                     </TableCell>
@@ -285,12 +295,12 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                       </TableCell>
                     </TableRow>
                   ) : null}
-                </Fragment>
-              );
-            })
-          )}
+              </Fragment>
+            );
+          })}
         </TableBody>
       </Table>
+      )}
     </div>
   );
 }

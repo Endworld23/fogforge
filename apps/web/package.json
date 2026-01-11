@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "clean": "next clean",
     "build": "next build",
+    "build:clean": "next clean && next build",
     "start": "next start",
     "lint": "eslint -c eslint.config.mjs . --max-warnings=0",
     "seed:csv": "tsx scripts/generate-seed-csvs.ts"

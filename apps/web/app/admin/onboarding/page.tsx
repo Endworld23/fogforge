@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import AdminEmptyState from "../../../components/admin/AdminEmptyState";
+import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
@@ -235,17 +237,16 @@ export default async function AdminOnboardingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight">Onboarding requests</h2>
-        <p className="text-sm text-muted-foreground">Review pending claim and listing requests.</p>
-      </div>
+      <AdminPageHeader
+        title="Onboarding requests"
+        description="Review pending claim and listing requests."
+      />
 
       {(requests ?? []).length === 0 ? (
-        <Card>
-          <CardContent className="py-6 text-sm text-muted-foreground">
-            No pending requests.
-          </CardContent>
-        </Card>
+        <AdminEmptyState
+          title="No pending onboarding requests"
+          description="New claim or listing requests will appear here."
+        />
       ) : (
         <div className="space-y-4">
           {(requests ?? []).map((request) => {

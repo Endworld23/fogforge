@@ -36,6 +36,7 @@ type ProviderRow = {
   phone: string | null;
   website_url: string | null;
   description: string | null;
+  is_published: boolean;
   metros: { id: string; name: string; slug: string; state: string } | null;
   categories: { id: string; slug: string; name: string } | null;
 };
@@ -87,7 +88,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     .schema("public")
     .from("providers")
     .select(
-      "id, slug, business_name, city, state, phone, website_url, description, metros!inner(id,name,slug,state), categories!inner(id,slug,name)"
+      "id, slug, business_name, city, state, phone, website_url, description, is_published, metros!inner(id,name,slug,state), categories!inner(id,slug,name)"
     )
     .eq("slug", params.provider)
     .eq("metros.slug", params.metro)
@@ -106,6 +107,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
         phone: data.phone ?? null,
         website_url: data.website_url ?? null,
         description: data.description ?? null,
+        is_published: data.is_published,
         metros: data.metros?.[0] ?? null,
         categories: data.categories?.[0] ?? null,
       }
@@ -224,6 +226,9 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     );
   }
 
+  const categoryLabel = provider.categories?.name ?? "Grease Trap Cleaning";
+  const isVerified = Boolean(provider.phone || provider.website_url);
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
       <header className="space-y-4">
@@ -247,21 +252,30 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
           </BreadcrumbList>
         </Breadcrumb>
         <Badge className="w-fit" variant="secondary">
-          Grease Trap Cleaning
+          {categoryLabel}
         </Badge>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            {provider.business_name}
-          </h1>
-          <Badge variant="outline" className="flex items-center gap-1">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Verified
-          </Badge>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+              {provider.business_name}
+            </h1>
+          </div>
+          <p className="flex items-center gap-2 text-sm text-muted-foreground md:text-base">
+            <MapPin className="h-4 w-4" />
+            {provider.city}, {provider.state}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={provider.is_published ? "secondary" : "outline"}>
+              {provider.is_published ? "Published" : "Draft"}
+            </Badge>
+            {isVerified ? (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Verified
+              </Badge>
+            ) : null}
+          </div>
         </div>
-        <p className="flex items-center gap-2 text-sm text-muted-foreground md:text-base">
-          <MapPin className="h-4 w-4" />
-          {provider.city}, {provider.state}
-        </p>
         <div className="flex flex-wrap items-center gap-3">
           {provider.phone ? (
             <Button asChild>
@@ -288,7 +302,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-        <div className="space-y-6">
+        <div className="order-2 space-y-6 lg:order-1">
           <Card>
             <CardHeader>
               <CardTitle>About</CardTitle>
@@ -321,7 +335,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
             </CardContent>
           </Card>
         </div>
-        <div className="lg:sticky lg:top-24">
+        <div className="order-1 lg:order-2 lg:sticky lg:top-24">
           <Card>
             <CardHeader>
               <CardTitle>Request a Quote</CardTitle>
@@ -329,12 +343,21 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
                 Tell us a bit about your needs and we&apos;ll send your request to the provider.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <LeadForm
                 providerId={provider.id}
                 categoryId={provider.categories.id}
                 metroId={provider.metros.id}
               />
+              <Separator />
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p className="text-sm font-semibold text-foreground">What happens next</p>
+                <ul className="space-y-2">
+                  <li>1. Submit your request.</li>
+                  <li>2. The provider contacts you with availability.</li>
+                  <li>3. You decide if you want to move forward.</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -1,4 +1,5 @@
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
+import AdminEmptyState from "../../../components/admin/AdminEmptyState";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import {
@@ -41,7 +42,10 @@ export default async function ActivityPage() {
         </CardHeader>
         <CardContent>
           {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No providers yet.</p>
+            <AdminEmptyState
+              title="No provider activity yet"
+              description="Provider engagement data will appear here once tracked."
+            />
           ) : (
             <Table>
               <TableHeader>
