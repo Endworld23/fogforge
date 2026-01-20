@@ -6,7 +6,7 @@ Run commands from `apps/web`, not repo root.
 
 ```bash
 npm run lint
-rm -rf .next
+npm run clean:next
 npm run build
 npm run start
 ```

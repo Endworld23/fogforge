@@ -14,6 +14,14 @@ type LeadRowDTO = {
   id: string;
   created_at: string;
   status: string;
+  viewed_at: string | null;
+  last_contacted_at: string | null;
+  resolved_at: string | null;
+  resolution_status: string | null;
+  escalated_at: string | null;
+  escalation_reason: string | null;
+  follow_up_at: string | null;
+  next_action: string | null;
   delivery_status: string;
   delivered_at: string | null;
   delivery_error: string | null;
@@ -45,7 +53,7 @@ export default async function AdminLeadsPage() {
       .schema("public")
       .from("leads")
       .select(
-        "id, created_at, status, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url, providers(business_name,slug), metros(name,slug,state), categories(slug,name)"
+        "id, created_at, status, viewed_at, last_contacted_at, resolved_at, resolution_status, escalated_at, escalation_reason, follow_up_at, next_action, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url, providers(business_name,slug), metros(name,slug,state), categories(slug,name)"
       )
       .order("created_at", { ascending: false }),
     supabase
@@ -59,6 +67,14 @@ export default async function AdminLeadsPage() {
     id: row.id,
     created_at: row.created_at,
     status: row.status,
+    viewed_at: row.viewed_at ?? null,
+    last_contacted_at: row.last_contacted_at ?? null,
+    resolved_at: row.resolved_at ?? null,
+    resolution_status: row.resolution_status ?? null,
+    escalated_at: row.escalated_at ?? null,
+    escalation_reason: row.escalation_reason ?? null,
+    follow_up_at: row.follow_up_at ?? null,
+    next_action: row.next_action ?? null,
     delivery_status: row.delivery_status ?? "pending",
     delivered_at: row.delivered_at ?? null,
     delivery_error: row.delivery_error ?? null,
@@ -89,6 +105,32 @@ export default async function AdminLeadsPage() {
           </>
         }
       />
+
+      {process.env.NODE_ENV !== "production" ? (
+        <Card className="border-border/70 bg-muted/40">
+          <CardHeader>
+            <CardTitle>Delivery checklist (dev only)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div>
+              <p className="font-medium text-foreground">Required env vars</p>
+              <p>RESEND_API_KEY, LEADS_FROM_EMAIL, LEADS_BCC_EMAIL, LEADS_FALLBACK_EMAIL</p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Migrations</p>
+              <p>Apply 20260108040210_lead_delivery_status.sql and 20260120000000_provider_claim_status.sql.</p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Quick test</p>
+              <ol className="list-decimal space-y-1 pl-5">
+                <li>Create test lead</li>
+                <li>Send now</li>
+                <li>Check delivery_status</li>
+              </ol>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {error ? (
         <Alert variant="destructive">

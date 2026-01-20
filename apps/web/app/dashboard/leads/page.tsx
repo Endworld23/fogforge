@@ -1,16 +1,8 @@
 import Link from "next/link";
-import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../components/ui/table";
 import { getUserContext } from "../../../lib/auth/getUserContext";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
+import LeadsTable from "./LeadsTable";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +10,10 @@ type LeadRowUI = {
   id: string;
   created_at: string;
   status: string;
+  viewed_at: string | null;
+  last_contacted_at: string | null;
+  resolved_at: string | null;
+  escalated_at: string | null;
   delivery_status: string;
   delivered_at: string | null;
   delivery_error: string | null;
@@ -67,7 +63,7 @@ export default async function DashboardLeadsPage() {
     .schema("public")
     .from("leads")
     .select(
-      "id, created_at, status, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url"
+      "id, created_at, status, viewed_at, last_contacted_at, resolved_at, escalated_at, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url"
     )
     .eq("provider_id", providerId)
     .order("created_at", { ascending: false });
@@ -76,6 +72,10 @@ export default async function DashboardLeadsPage() {
     id: lead.id,
     created_at: lead.created_at,
     status: lead.status,
+    viewed_at: lead.viewed_at ?? null,
+    last_contacted_at: lead.last_contacted_at ?? null,
+    resolved_at: lead.resolved_at ?? null,
+    escalated_at: lead.escalated_at ?? null,
     delivery_status: lead.delivery_status ?? "pending",
     delivered_at: lead.delivered_at ?? null,
     delivery_error: lead.delivery_error ?? null,
@@ -92,55 +92,7 @@ export default async function DashboardLeadsPage() {
         <CardTitle>Leads</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Created</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Delivery</TableHead>
-              <TableHead>Message</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leads.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
-                  No leads yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              leads.map((lead) => (
-                <TableRow key={lead.id}>
-                  <TableCell>{new Date(lead.created_at).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={lead.status === "new" ? "default" : "outline"}>
-                      {lead.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{lead.name}</TableCell>
-                  <TableCell>{lead.email}</TableCell>
-                  <TableCell>{lead.phone ?? "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant={lead.delivery_status === "delivered" ? "secondary" : "outline"}>
-                      {lead.delivery_status}
-                    </Badge>
-                    {lead.delivery_error ? (
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {lead.delivery_error}
-                      </div>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="max-w-xs text-sm text-muted-foreground">
-                    {lead.message ?? "—"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <LeadsTable leads={leads} />
       </CardContent>
     </Card>
   );

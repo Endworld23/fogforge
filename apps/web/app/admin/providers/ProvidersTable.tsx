@@ -24,7 +24,7 @@ type ProviderRow = {
   slug: string;
   status: string;
   is_published: boolean;
-  isVerified: boolean;
+  provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
 };
 
 type ProvidersTableProps = {
@@ -47,6 +47,17 @@ export default function ProvidersTable({ providers }: ProvidersTableProps) {
       return name.includes(normalized) || slug.includes(normalized);
     });
   }, [localProviders, query]);
+
+  const providerStateBadge = (state: ProviderRow["provider_state"]) => {
+    switch (state) {
+      case "VERIFIED":
+        return { label: "Verified", variant: "secondary" as const };
+      case "CLAIMED_UNVERIFIED":
+        return { label: "Claimed (unverified)", variant: "outline" as const };
+      default:
+        return { label: "Unclaimed", variant: "outline" as const };
+    }
+  };
 
   const handlePublishToggle = (providerId: string, nextValue: boolean) => {
     setPendingId(providerId);
@@ -117,7 +128,9 @@ export default function ProvidersTable({ providers }: ProvidersTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((provider) => (
+            {filtered.map((provider) => {
+              const stateBadge = providerStateBadge(provider.provider_state);
+              return (
               <TableRow key={provider.id}>
                 <TableCell className="font-medium">
                   <Link
@@ -155,12 +168,11 @@ export default function ProvidersTable({ providers }: ProvidersTableProps) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={provider.isVerified ? "secondary" : "outline"}>
-                    {provider.isVerified ? "Verified" : "Unclaimed"}
-                  </Badge>
+                  <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       )}

@@ -3,6 +3,7 @@ import AdminPageHeader from "../../../../components/admin/AdminPageHeader";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
+import { getProviderState } from "../../../../lib/providers/providerState";
 import { createServerSupabaseReadOnly } from "../../../../lib/supabase/server";
 import ProviderActions from "./ProviderActions";
 
@@ -26,6 +27,9 @@ type ProviderRow = {
   is_published: boolean;
   is_claimed: boolean | null;
   user_id: string | null;
+  claim_status: string | null;
+  verified_at: string | null;
+  claimed_by_user_id: string | null;
   metros: { name: string; slug: string; state: string } | null;
   categories: { name: string | null; slug: string } | null;
 };
@@ -37,7 +41,7 @@ export default async function ProviderDetailPage({ params }: ProviderDetailProps
     .schema("public")
     .from("providers")
     .select(
-      "id, business_name, slug, description, city, state, street, postal_code, phone, email_public, website_url, status, is_published, is_claimed, user_id, metros(name, slug, state), categories(name, slug)"
+      "id, business_name, slug, description, city, state, street, postal_code, phone, email_public, website_url, status, is_published, is_claimed, user_id, claim_status, verified_at, claimed_by_user_id, metros(name, slug, state), categories(name, slug)"
     )
     .eq("slug", resolvedParams.slug)
     .maybeSingle();
@@ -59,6 +63,9 @@ export default async function ProviderDetailPage({ params }: ProviderDetailProps
         is_published: data.is_published,
         is_claimed: data.is_claimed ?? null,
         user_id: data.user_id ?? null,
+        claim_status: data.claim_status ?? null,
+        verified_at: data.verified_at ?? null,
+        claimed_by_user_id: data.claimed_by_user_id ?? null,
         metros: data.metros?.[0] ?? null,
         categories: data.categories?.[0] ?? null,
       }
@@ -93,6 +100,15 @@ export default async function ProviderDetailPage({ params }: ProviderDetailProps
   ]
     .filter(Boolean)
     .join(" • ");
+  const providerState = getProviderState(provider);
+  const providerStateLabel =
+    providerState === "VERIFIED"
+      ? "Verified"
+      : providerState === "CLAIMED_UNVERIFIED"
+        ? "Claimed (unverified)"
+        : "Unclaimed";
+  const providerStateVariant =
+    providerState === "VERIFIED" ? "secondary" : "outline";
 
   return (
     <div className="space-y-6">
@@ -113,9 +129,7 @@ export default async function ProviderDetailPage({ params }: ProviderDetailProps
         <Badge variant={provider.is_published ? "secondary" : "outline"}>
           {provider.is_published ? "Published" : "Draft"}
         </Badge>
-        <Badge variant={provider.user_id ? "secondary" : "outline"}>
-          {provider.user_id ? "Verified" : "Unclaimed"}
-        </Badge>
+        <Badge variant={providerStateVariant}>{providerStateLabel}</Badge>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "clean": "next clean",
     "build": "next build --webpack",
-    "build:clean": "next clean && next build",
+    "clean:next": "node ./scripts/clean-next.mjs",
+    "build:clean": "npm run clean:next && next build --webpack",
     "start": "next start",
     "lint": "eslint -c eslint.config.mjs . --max-warnings=0",
     "seed:csv": "tsx scripts/generate-seed-csvs.ts"

@@ -24,6 +24,9 @@ type CreateTestLeadResult = {
   leadId?: string;
 };
 
+const RESOLUTION_STATUSES = ["won", "lost", "closed", "spam"] as const;
+type ResolutionStatus = (typeof RESOLUTION_STATUSES)[number];
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isValidUuid(value: string) {
@@ -142,4 +145,160 @@ export async function createTestLeadAction(
 
   revalidatePath("/admin/leads");
   return { ok: true, message: "Test lead created.", leadId: data.id };
+}
+
+export async function markLeadViewedAction(leadId: string): Promise<LeadActionResult> {
+  if (!leadId) {
+    return { ok: false, message: "Missing lead id." };
+  }
+
+  const isAdmin = await isAdminServer();
+  if (!isAdmin) {
+    return { ok: false, message: "Not authorized." };
+  }
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .schema("public")
+    .from("leads")
+    .update({ viewed_at: new Date().toISOString() })
+    .eq("id", leadId)
+    .is("viewed_at", null);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/admin/leads");
+  return { ok: true, message: "Lead marked as viewed." };
+}
+
+export async function markLeadContactedAction(leadId: string): Promise<LeadActionResult> {
+  if (!leadId) {
+    return { ok: false, message: "Missing lead id." };
+  }
+
+  const isAdmin = await isAdminServer();
+  if (!isAdmin) {
+    return { ok: false, message: "Not authorized." };
+  }
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .schema("public")
+    .from("leads")
+    .update({ last_contacted_at: new Date().toISOString() })
+    .eq("id", leadId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/admin/leads");
+  return { ok: true, message: "Lead marked as contacted." };
+}
+
+export async function setLeadResolvedAction(
+  leadId: string,
+  resolutionStatus: ResolutionStatus
+): Promise<LeadActionResult> {
+  if (!leadId) {
+    return { ok: false, message: "Missing lead id." };
+  }
+
+  if (!RESOLUTION_STATUSES.includes(resolutionStatus)) {
+    return { ok: false, message: "Invalid resolution status." };
+  }
+
+  const isAdmin = await isAdminServer();
+  if (!isAdmin) {
+    return { ok: false, message: "Not authorized." };
+  }
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .schema("public")
+    .from("leads")
+    .update({
+      resolved_at: new Date().toISOString(),
+      resolution_status: resolutionStatus,
+    })
+    .eq("id", leadId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/admin/leads");
+  return { ok: true, message: "Lead resolved." };
+}
+
+export async function setLeadFollowUpAction(
+  leadId: string,
+  followUpAt?: string | null,
+  nextAction?: string | null
+): Promise<LeadActionResult> {
+  if (!leadId) {
+    return { ok: false, message: "Missing lead id." };
+  }
+
+  const isAdmin = await isAdminServer();
+  if (!isAdmin) {
+    return { ok: false, message: "Not authorized." };
+  }
+
+  const followUpValue = followUpAt?.trim() ? new Date(followUpAt).toISOString() : null;
+  const nextActionValue = nextAction?.trim() ? nextAction.trim() : null;
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .schema("public")
+    .from("leads")
+    .update({
+      follow_up_at: followUpValue,
+      next_action: nextActionValue,
+    })
+    .eq("id", leadId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/admin/leads");
+  return { ok: true, message: "Follow-up saved." };
+}
+
+export async function escalateLeadAction(
+  leadId: string,
+  escalationReason: string
+): Promise<LeadActionResult> {
+  if (!leadId) {
+    return { ok: false, message: "Missing lead id." };
+  }
+
+  if (!escalationReason?.trim()) {
+    return { ok: false, message: "Escalation reason is required." };
+  }
+
+  const isAdmin = await isAdminServer();
+  if (!isAdmin) {
+    return { ok: false, message: "Not authorized." };
+  }
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .schema("public")
+    .from("leads")
+    .update({
+      escalated_at: new Date().toISOString(),
+      escalation_reason: escalationReason.trim(),
+    })
+    .eq("id", leadId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/admin/leads");
+  return { ok: true, message: "Lead escalated." };
 }
