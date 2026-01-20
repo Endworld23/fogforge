@@ -232,6 +232,7 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
           {filteredLeads.map((lead) => {
             const isExpanded = expanded.includes(lead.id);
             const canResend = lead.delivery_status !== "delivered";
+            const isTestLead = lead.source_url === "admin://test-lead";
             return (
               <Fragment key={lead.id}>
                 <TableRow key={lead.id}>
@@ -316,7 +317,11 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                             onClick={() => handleResend(lead.id)}
                             disabled={isPending || resendingId === lead.id}
                           >
-                            {resendingId === lead.id ? "Resending..." : "Resend"}
+                            {resendingId === lead.id
+                              ? "Resending..."
+                              : isTestLead
+                                ? "Send now"
+                                : "Resend"}
                           </Button>
                         ) : null}
                         <Button

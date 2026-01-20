@@ -14,16 +14,18 @@ import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type LeadRow = {
+type LeadRowUI = {
   id: string;
   created_at: string;
   status: string;
+  delivery_status: string;
+  delivered_at: string | null;
+  delivery_error: string | null;
   name: string;
   email: string;
   phone: string | null;
   message: string | null;
   source_url: string | null;
-  delivery: { status: string; error: string | null; created_at: string } | null;
 };
 
 export default async function DashboardLeadsPage() {
@@ -46,7 +48,16 @@ export default async function DashboardLeadsPage() {
   }
 
   if (!providerUser) {
-    return null;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Provider leads</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          This account is not linked to a provider yet.
+        </CardContent>
+      </Card>
+    );
   }
 
   const supabase = await createServerSupabaseReadOnly();
@@ -55,38 +66,24 @@ export default async function DashboardLeadsPage() {
   const { data } = await supabase
     .schema("public")
     .from("leads")
-    .select("id, created_at, status, name, email, phone, message, source_url")
+    .select(
+      "id, created_at, status, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url"
+    )
     .eq("provider_id", providerId)
     .order("created_at", { ascending: false });
 
-  const { data: deliveries } = await supabase
-    .schema("public")
-    .from("lead_deliveries")
-    .select("lead_id, status, error, created_at")
-    .eq("provider_id", providerId)
-    .order("created_at", { ascending: false });
-
-  const latestDeliveryByLead = new Map<string, { status: string; error: string | null; created_at: string }>();
-  (deliveries ?? []).forEach((delivery) => {
-    if (!latestDeliveryByLead.has(delivery.lead_id)) {
-      latestDeliveryByLead.set(delivery.lead_id, {
-        status: delivery.status,
-        error: delivery.error ?? null,
-        created_at: delivery.created_at,
-      });
-    }
-  });
-
-  const leads: LeadRow[] = (data ?? []).map((lead) => ({
+  const leads: LeadRowUI[] = (data ?? []).map((lead) => ({
     id: lead.id,
     created_at: lead.created_at,
     status: lead.status,
+    delivery_status: lead.delivery_status ?? "pending",
+    delivered_at: lead.delivered_at ?? null,
+    delivery_error: lead.delivery_error ?? null,
     name: lead.name,
     email: lead.email,
     phone: lead.phone ?? null,
     message: lead.message ?? null,
     source_url: lead.source_url ?? null,
-    delivery: latestDeliveryByLead.get(lead.id) ?? null,
   }));
 
   return (
@@ -127,16 +124,12 @@ export default async function DashboardLeadsPage() {
                   <TableCell>{lead.email}</TableCell>
                   <TableCell>{lead.phone ?? "—"}</TableCell>
                   <TableCell>
-                    {lead.delivery ? (
-                      <Badge variant={lead.delivery.status === "sent" ? "secondary" : "outline"}>
-                        {lead.delivery.status}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">pending</Badge>
-                    )}
-                    {lead.delivery?.error ? (
+                    <Badge variant={lead.delivery_status === "delivered" ? "secondary" : "outline"}>
+                      {lead.delivery_status}
+                    </Badge>
+                    {lead.delivery_error ? (
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {lead.delivery.error}
+                        {lead.delivery_error}
                       </div>
                     ) : null}
                   </TableCell>

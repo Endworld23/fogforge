@@ -86,6 +86,9 @@ async function approveRequest(formData: FormData) {
         is_published: false,
         status: "active",
         is_claimed: true,
+        claim_status: "claimed",
+        claimed_by_user_id: request.user_id,
+        verified_at: new Date().toISOString(),
       })
       .select("id")
       .single();
@@ -121,7 +124,13 @@ async function approveRequest(formData: FormData) {
     await supabase
       .schema("public")
       .from("providers")
-      .update({ is_claimed: true, user_id: request.user_id })
+      .update({
+        is_claimed: true,
+        user_id: request.user_id,
+        claim_status: "claimed",
+        claimed_by_user_id: request.user_id,
+        verified_at: new Date().toISOString(),
+      })
       .eq("id", providerId);
   }
 

@@ -1,7 +1,8 @@
 "use server";
 
 import { headers } from "next/headers";
-import { Resend } from "resend";
+import { deliverLead } from "../../../../../../lib/leads/deliverLead";
+import { getProviderState } from "../../../../../../lib/providers/providerState";
 import { createServerSupabase } from "../../../../../../lib/supabase/server";
 
 type LeadFormState = {
@@ -72,61 +73,47 @@ export async function submitLeadAction(
   }
 
   const leadId = leadRow?.id;
+  if (!leadId) {
+    return { ok: false, message: "Unable to create your request. Please try again." };
+  }
+
   const { data: providerRow } = await supabase
     .schema("public")
     .from("providers")
-    .select("email_public, business_name")
+    .select("id, email_public, business_name, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id")
     .eq("id", providerId)
     .maybeSingle();
 
-  const providerEmail = providerRow?.email_public ?? null;
-  const providerName = providerRow?.business_name ?? "Provider";
-  let deliveryStatus: "sent" | "failed" = "failed";
-  let deliveryError = "Provider has no public email";
-
-  if (providerEmail && leadId) {
-    const resendApiKey = process.env.RESEND_API_KEY ?? "";
-    const fromEmail = process.env.LEADS_FROM_EMAIL ?? "";
-    const bccEmail = process.env.LEADS_BCC_EMAIL ?? "";
-
-    if (!resendApiKey || !fromEmail) {
-      deliveryError = "Missing Resend configuration";
-    } else {
-      try {
-        const resend = new Resend(resendApiKey);
-        await resend.emails.send({
-          from: fromEmail,
-          to: providerEmail,
-          bcc: bccEmail ? [bccEmail] : undefined,
-          subject: `New lead for ${providerName}`,
-          text: [
-            `Name: ${name}`,
-            `Email: ${email}`,
-            `Phone: ${typeof phone === "string" && phone.length > 0 ? phone : "N/A"}`,
-            `Message: ${typeof message === "string" && message.length > 0 ? message : "N/A"}`,
-            `Source: ${resolvedSourceUrl || "N/A"}`,
-          ].join("\n"),
-        });
-        deliveryStatus = "sent";
-        deliveryError = "";
-      } catch (deliveryException) {
-        deliveryStatus = "failed";
-        deliveryError =
-          deliveryException instanceof Error
-            ? deliveryException.message
-            : "Resend delivery failed";
-      }
-    }
+  if (!providerRow) {
+    await supabase
+      .schema("public")
+      .from("leads")
+      .update({
+        delivery_status: "pending",
+        delivered_at: null,
+        delivery_error: "Provider not found for delivery.",
+      })
+      .eq("id", leadId);
+    return { ok: true, message: "Request received. We'll be in touch soon." };
   }
 
-  if (leadId) {
-    await supabase.schema("public").from("lead_deliveries").insert({
-      lead_id: leadId,
-      provider_id: providerId,
-      method: "email",
-      status: deliveryStatus,
-      error: deliveryError || null,
-    });
+  const providerState = getProviderState(providerRow);
+  if (providerState === "VERIFIED") {
+    await deliverLead(leadId);
+  } else {
+    const reason =
+      providerState === "CLAIMED_UNVERIFIED"
+        ? "Verification required."
+        : "Provider unclaimed (escrow).";
+    await supabase
+      .schema("public")
+      .from("leads")
+      .update({
+        delivery_status: "pending",
+        delivered_at: null,
+        delivery_error: reason,
+      })
+      .eq("id", leadId);
   }
 
   return { ok: true, message: "Request received. We'll be in touch soon." };
