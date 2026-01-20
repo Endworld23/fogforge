@@ -5,7 +5,7 @@ import { getUserContext } from "../../lib/auth/getUserContext";
 import OnboardingFlow from "./OnboardingFlow";
 
 type OnboardingPageProps = {
-  searchParams?: { mode?: string };
+  searchParams?: Promise<{ mode?: string }>;
 };
 
 export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
@@ -28,7 +28,8 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
       .order("name", { ascending: true }),
   ]);
 
-  const mode = searchParams?.mode;
+  const resolvedParams = await Promise.resolve(searchParams);
+  const mode = resolvedParams?.mode;
   const initialMode = mode === "claim" || mode === "list" ? mode : undefined;
 
   return (

@@ -25,7 +25,7 @@ import { getSiteUrl } from "../../../../../../lib/seo";
 import LeadForm from "./LeadForm";
 
 type ProviderPageProps = {
-  params: { state: string; metro: string; provider: string };
+  params: Promise<{ state: string; metro: string; provider: string }>;
 };
 
 type ProviderRow = {
@@ -47,6 +47,7 @@ const siteUrl = getSiteUrl();
 export async function generateMetadata({
   params,
 }: ProviderPageProps): Promise<Metadata> {
+  const resolvedParams = await params;
   const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase
     .schema("public")
@@ -54,8 +55,8 @@ export async function generateMetadata({
     .select(
       "business_name, city, state, metros!inner(name,slug,state), categories!inner(slug)"
     )
-    .eq("slug", params.provider)
-    .eq("metros.slug", params.metro)
+    .eq("slug", resolvedParams.provider)
+    .eq("metros.slug", resolvedParams.metro)
     .eq("categories.slug", "grease-trap-cleaning")
     .eq("is_published", true)
     .eq("status", "active")
@@ -63,11 +64,11 @@ export async function generateMetadata({
 
   const providerName = data?.business_name ?? "Provider";
   const city = data?.city ?? "Local";
-  const state = data?.state ?? params.state.toUpperCase();
+  const state = data?.state ?? resolvedParams.state.toUpperCase();
   const title = `${providerName} – Grease Trap Cleaning in ${city}, ${state}`;
   const description = `Contact ${providerName} for grease trap cleaning services in ${city}, ${state}. Request a quote or call today.`;
   const canonical = siteUrl
-    ? `${siteUrl}/grease-trap-cleaning/${params.state}/${params.metro}/${params.provider}`
+    ? `${siteUrl}/grease-trap-cleaning/${resolvedParams.state}/${resolvedParams.metro}/${resolvedParams.provider}`
     : undefined;
 
   return {
@@ -84,6 +85,7 @@ export async function generateMetadata({
 }
 
 export default async function ProviderDetailPage({ params }: ProviderPageProps) {
+  const resolvedParams = await params;
   const supabase = await createServerSupabaseReadOnly();
   const { data, error } = await supabase
     .schema("public")
@@ -91,8 +93,8 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     .select(
       "id, slug, business_name, city, state, phone, website_url, description, is_published, metros!inner(id,name,slug,state), categories!inner(id,slug,name)"
     )
-    .eq("slug", params.provider)
-    .eq("metros.slug", params.metro)
+    .eq("slug", resolvedParams.provider)
+    .eq("metros.slug", resolvedParams.metro)
     .eq("categories.slug", "grease-trap-cleaning")
     .eq("is_published", true)
     .eq("status", "active")
@@ -138,7 +140,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbLink
-                href={`/grease-trap-cleaning/${params.state}/${params.metro}`}
+                href={`/grease-trap-cleaning/${resolvedParams.state}/${resolvedParams.metro}`}
               >
                 {provider.metros.name}
               </BreadcrumbLink>

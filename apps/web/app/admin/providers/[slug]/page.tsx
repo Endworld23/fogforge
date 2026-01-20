@@ -7,7 +7,7 @@ import { createServerSupabaseReadOnly } from "../../../../lib/supabase/server";
 import ProviderActions from "./ProviderActions";
 
 type ProviderDetailProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 type ProviderRow = {
@@ -31,6 +31,7 @@ type ProviderRow = {
 };
 
 export default async function ProviderDetailPage({ params }: ProviderDetailProps) {
+  const resolvedParams = await params;
   const supabase = await createServerSupabaseReadOnly();
   const { data } = await supabase
     .schema("public")
@@ -38,7 +39,7 @@ export default async function ProviderDetailPage({ params }: ProviderDetailProps
     .select(
       "id, business_name, slug, description, city, state, street, postal_code, phone, email_public, website_url, status, is_published, is_claimed, user_id, metros(name, slug, state), categories(name, slug)"
     )
-    .eq("slug", params.slug)
+    .eq("slug", resolvedParams.slug)
     .maybeSingle();
 
   const provider: ProviderRow | null = data

@@ -15,7 +15,7 @@ type FlowType = "claim" | "list" | null;
 type AuthMode = "signup" | "signin";
 
 type GetStartedPageProps = {
-  searchParams?: { mode?: string };
+  searchParams?: Promise<{ mode?: string }>;
 };
 
 export default function GetStartedPage({ searchParams }: GetStartedPageProps) {
@@ -31,13 +31,17 @@ export default function GetStartedPage({ searchParams }: GetStartedPageProps) {
 
   useEffect(() => {
     if (initialApplied.current) return;
-    const modeParam = searchParams?.mode;
-    if (modeParam === "claim" || modeParam === "list") {
-      setFlowType(modeParam);
-      setStep(1);
-      initialApplied.current = true;
-    }
-  }, [searchParams?.mode]);
+    const resolveParams = async () => {
+      const resolvedParams = await Promise.resolve(searchParams);
+      const modeParam = resolvedParams?.mode;
+      if (modeParam === "claim" || modeParam === "list") {
+        setFlowType(modeParam);
+        setStep(1);
+        initialApplied.current = true;
+      }
+    };
+    void resolveParams();
+  }, [searchParams]);
 
   const handleChooseFlow = (type: Exclude<FlowType, null>) => {
     setFlowType(type);

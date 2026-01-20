@@ -21,8 +21,8 @@ import ProvidersGrid from "./ProvidersGrid";
 const PAGE_SIZE = 20;
 
 type MetroCategoryPageProps = {
-  params: { state: string; metro: string };
-  searchParams?: { page?: string | string[]; q?: string | string[] };
+  params: Promise<{ state: string; metro: string }>;
+  searchParams?: Promise<{ page?: string | string[]; q?: string | string[] }>;
 };
 
 type ProviderRow = {
@@ -41,20 +41,21 @@ const siteUrl = getSiteUrl();
 export async function generateMetadata({
   params,
 }: MetroCategoryPageProps): Promise<Metadata> {
+  const resolvedParams = await params;
   const supabase = await createServerSupabaseReadOnly();
   const { data: metroData } = await supabase
     .schema("public")
     .from("metros")
     .select("name, state")
-    .eq("slug", params.metro)
+    .eq("slug", resolvedParams.metro)
     .maybeSingle();
 
-  const metroName = metroData?.name ?? params.metro.replace(/-/g, " ");
-  const metroState = metroData?.state ?? params.state.toUpperCase();
+  const metroName = metroData?.name ?? resolvedParams.metro.replace(/-/g, " ");
+  const metroState = metroData?.state ?? resolvedParams.state.toUpperCase();
   const title = `Grease Trap Cleaning in ${metroName}, ${metroState}`;
   const description = `Browse grease trap cleaning providers serving ${metroName}, ${metroState}. Compare local businesses and request a quote.`;
   const canonical = siteUrl
-    ? `${siteUrl}/grease-trap-cleaning/${params.state}/${params.metro}`
+    ? `${siteUrl}/grease-trap-cleaning/${resolvedParams.state}/${resolvedParams.metro}`
     : undefined;
 
   return {
@@ -74,10 +75,14 @@ export default async function MetroCategoryPage({
   params,
   searchParams,
 }: MetroCategoryPageProps) {
-  const pageParam = Array.isArray(searchParams?.page)
-    ? searchParams?.page[0]
-    : searchParams?.page;
-  const queryParam = Array.isArray(searchParams?.q) ? searchParams?.q[0] : searchParams?.q;
+  const resolvedParams = await params;
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const pageParam = Array.isArray(resolvedSearchParams?.page)
+    ? resolvedSearchParams?.page[0]
+    : resolvedSearchParams?.page;
+  const queryParam = Array.isArray(resolvedSearchParams?.q)
+    ? resolvedSearchParams?.q[0]
+    : resolvedSearchParams?.q;
   const searchQuery = queryParam?.trim() ?? "";
   const isSearching = searchQuery.length > 0;
   const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
@@ -90,7 +95,7 @@ export default async function MetroCategoryPage({
       .schema("public")
       .from("metros")
       .select("id, name, slug, state")
-      .eq("slug", params.metro)
+      .eq("slug", resolvedParams.metro)
       .maybeSingle(),
     supabase
       .schema("public")
@@ -140,8 +145,8 @@ export default async function MetroCategoryPage({
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / PAGE_SIZE);
   const hasPrev = page > 1;
   const hasNext = totalPages > 0 && page < totalPages;
-  const metroName = metroData?.name ?? params.metro.replace(/-/g, " ");
-  const metroState = metroData?.state ?? params.state.toUpperCase();
+  const metroName = metroData?.name ?? resolvedParams.metro.replace(/-/g, " ");
+  const metroState = metroData?.state ?? resolvedParams.state.toUpperCase();
   const categoryName = categoryData?.name ?? "Grease Trap Cleaning";
   const buildPageHref = (pageNumber: number) => {
     const params = new URLSearchParams();
@@ -197,8 +202,8 @@ export default async function MetroCategoryPage({
             <ProvidersGrid
               providers={providers}
               totalCount={totalCount}
-              state={params.state}
-              metro={params.metro}
+              state={resolvedParams.state}
+              metro={resolvedParams.metro}
             />
           )}
 

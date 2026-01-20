@@ -32,7 +32,7 @@ type MetroRow = {
 };
 
 type GreaseTrapCleaningPageProps = {
-  searchParams?: { query?: string | string[] };
+  searchParams?: Promise<{ query?: string | string[] }>;
 };
 
 export default async function GreaseTrapCleaningPage({ searchParams }: GreaseTrapCleaningPageProps) {
@@ -49,9 +49,10 @@ export default async function GreaseTrapCleaningPage({ searchParams }: GreaseTra
     slug: metro.slug,
     state: metro.state,
   }));
-  const queryParam = Array.isArray(searchParams?.query)
-    ? searchParams?.query[0]
-    : searchParams?.query;
+  const resolvedParams = await Promise.resolve(searchParams);
+  const queryParam = Array.isArray(resolvedParams?.query)
+    ? resolvedParams?.query[0]
+    : resolvedParams?.query;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-12">
