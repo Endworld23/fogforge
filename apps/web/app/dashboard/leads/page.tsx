@@ -14,6 +14,7 @@ type LeadRowUI = {
   last_contacted_at: string | null;
   resolved_at: string | null;
   escalated_at: string | null;
+  resolution_status: string | null;
   delivery_status: string;
   delivered_at: string | null;
   delivery_error: string | null;
@@ -22,6 +23,8 @@ type LeadRowUI = {
   phone: string | null;
   message: string | null;
   source_url: string | null;
+  follow_up_at: string | null;
+  next_action: string | null;
 };
 
 export default async function DashboardLeadsPage() {
@@ -63,7 +66,7 @@ export default async function DashboardLeadsPage() {
     .schema("public")
     .from("leads")
     .select(
-      "id, created_at, status, viewed_at, last_contacted_at, resolved_at, escalated_at, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url"
+      "id, created_at, status, viewed_at, last_contacted_at, resolved_at, escalated_at, resolution_status, follow_up_at, next_action, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url"
     )
     .eq("provider_id", providerId)
     .order("created_at", { ascending: false });
@@ -76,6 +79,7 @@ export default async function DashboardLeadsPage() {
     last_contacted_at: lead.last_contacted_at ?? null,
     resolved_at: lead.resolved_at ?? null,
     escalated_at: lead.escalated_at ?? null,
+    resolution_status: lead.resolution_status ?? null,
     delivery_status: lead.delivery_status ?? "pending",
     delivered_at: lead.delivered_at ?? null,
     delivery_error: lead.delivery_error ?? null,
@@ -84,6 +88,8 @@ export default async function DashboardLeadsPage() {
     phone: lead.phone ?? null,
     message: lead.message ?? null,
     source_url: lead.source_url ?? null,
+    follow_up_at: lead.follow_up_at ?? null,
+    next_action: lead.next_action ?? null,
   }));
 
   return (
