@@ -34,12 +34,14 @@ function SubmitButton() {
 export default function LeadForm({ providerId, categoryId, metroId }: LeadFormProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
+  const [formStartedAt, setFormStartedAt] = useState(0);
   const [state, formAction] = useFormState(submitLeadAction, initialState);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     setSourceUrl(window.location.href);
+    setFormStartedAt(Date.now());
   }, []);
 
   useEffect(() => {
@@ -109,6 +111,15 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="metroId" value={metroId} />
       <input type="hidden" name="sourceUrl" value={sourceUrl} />
+      <input type="hidden" name="formStartedAt" value={formStartedAt.toString()} />
+      <input
+        type="text"
+        name="company"
+        autoComplete="off"
+        tabIndex={-1}
+        className="hidden"
+        aria-hidden="true"
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">

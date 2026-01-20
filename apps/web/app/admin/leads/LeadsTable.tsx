@@ -16,12 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from "../../../components/ui/table";
-import { markLeadSentAction } from "./actions";
+import { markLeadSentAction, resendLeadAction } from "./actions";
 
-type LeadRow = {
+type LeadRowUI = {
   id: string;
   created_at: string;
   status: string;
+  delivery_status: string;
+  delivered_at: string | null;
+  delivery_error: string | null;
   name: string;
   email: string;
   phone: string | null;
@@ -30,7 +33,6 @@ type LeadRow = {
   provider: { business_name: string; slug: string } | null;
   metro: { name: string; slug: string; state: string } | null;
   category: { slug: string; name: string | null } | null;
-  delivery: { status: string; error: string | null; created_at: string } | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -47,13 +49,20 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
   spam: "outline",
 };
 
+const deliveryLabels: Record<string, string> = {
+  pending: "Pending",
+  delivered: "Delivered",
+  failed: "Failed",
+};
+
 const deliveryVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  sent: "secondary",
+  pending: "outline",
+  delivered: "secondary",
   failed: "destructive",
 };
 
 type LeadsTableProps = {
-  leads: LeadRow[];
+  leads: LeadRowUI[];
 };
 
 export default function LeadsTable({ leads }: LeadsTableProps) {
@@ -61,6 +70,8 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<string[]>([]);
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
+  const [deliveryNotice, setDeliveryNotice] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [localLeads, setLocalLeads] = useState(leads);
 
@@ -101,6 +112,32 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
           prev.map((lead) => (lead.id === leadId ? { ...lead, status: "sent" } : lead))
         );
       }
+    });
+  };
+
+  const handleResend = (leadId: string) => {
+    setDeliveryNotice(null);
+    setResendingId(leadId);
+    startTransition(async () => {
+      const result = await resendLeadAction(leadId);
+      if (!result.ok) {
+        setDeliveryNotice(result.message);
+      }
+      if (result.ok) {
+        setLocalLeads((prev) =>
+          prev.map((lead) =>
+            lead.id === leadId
+              ? {
+                  ...lead,
+                  delivery_status: "delivered",
+                  delivered_at: new Date().toISOString(),
+                  delivery_error: null,
+                }
+              : lead
+          )
+        );
+      }
+      setResendingId(null);
     });
   };
 
@@ -159,6 +196,12 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
         </Alert>
       ) : null}
 
+      {deliveryNotice ? (
+        <Alert className="border-rose-200 bg-rose-50">
+          <AlertDescription className="text-rose-900">{deliveryNotice}</AlertDescription>
+        </Alert>
+      ) : null}
+
       {filteredLeads.length === 0 ? (
         <AdminEmptyState
           title="No leads found"
@@ -188,6 +231,7 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
         <TableBody>
           {filteredLeads.map((lead) => {
             const isExpanded = expanded.includes(lead.id);
+            const canResend = lead.delivery_status !== "delivered";
             return (
               <Fragment key={lead.id}>
                 <TableRow key={lead.id}>
@@ -240,13 +284,9 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                       )}
                     </TableCell>
                     <TableCell>
-                      {lead.delivery ? (
-                        <Badge variant={deliveryVariants[lead.delivery.status] ?? "outline"}>
-                          {lead.delivery.status}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">pending</Badge>
-                      )}
+                      <Badge variant={deliveryVariants[lead.delivery_status] ?? "outline"}>
+                        {deliveryLabels[lead.delivery_status] ?? lead.delivery_status}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -268,6 +308,17 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                             </>
                           )}
                         </Button>
+                        {canResend ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => handleResend(lead.id)}
+                            disabled={isPending || resendingId === lead.id}
+                          >
+                            {resendingId === lead.id ? "Resending..." : "Resend"}
+                          </Button>
+                        ) : null}
                         <Button
                           size="sm"
                           type="button"
@@ -286,9 +337,9 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                           <div className="whitespace-pre-wrap">
                             {lead.message ? lead.message : "No message provided."}
                           </div>
-                          {lead.delivery?.error ? (
+                          {lead.delivery_error ? (
                             <div className="text-xs text-muted-foreground">
-                              Delivery error: {lead.delivery.error}
+                              Delivery error: {lead.delivery_error}
                             </div>
                           ) : null}
                         </div>

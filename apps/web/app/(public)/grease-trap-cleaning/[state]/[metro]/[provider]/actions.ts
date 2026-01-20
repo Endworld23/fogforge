@@ -21,6 +21,8 @@ export async function submitLeadAction(
   const phone = formData.get("phone");
   const message = formData.get("message");
   const sourceUrl = formData.get("sourceUrl");
+  const honeypot = formData.get("company");
+  const formStartedAt = formData.get("formStartedAt");
 
   if (
     typeof providerId !== "string" ||
@@ -30,6 +32,17 @@ export async function submitLeadAction(
     typeof email !== "string"
   ) {
     return { ok: false, message: "Missing required fields." };
+  }
+  if (typeof honeypot === "string" && honeypot.trim().length > 0) {
+    return { ok: false, message: "Unable to submit your request. Please try again." };
+  }
+  const startedAtMs =
+    typeof formStartedAt === "string" ? Number.parseInt(formStartedAt, 10) : 0;
+  if (Number.isFinite(startedAtMs) && startedAtMs > 0) {
+    const elapsedMs = Date.now() - startedAtMs;
+    if (elapsedMs < 1500) {
+      return { ok: false, message: "Please take a moment and try again." };
+    }
   }
 
   const supabase = await createServerSupabase();
