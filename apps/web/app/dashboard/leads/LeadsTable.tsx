@@ -168,13 +168,14 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
           <TableHead>Phone</TableHead>
           <TableHead>Delivery</TableHead>
           <TableHead></TableHead>
+          <TableHead>Lifecycle</TableHead>
           <TableHead>Message</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {localLeads.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={9} className="text-center text-sm text-muted-foreground">
+            <TableCell colSpan={10} className="text-center text-sm text-muted-foreground">
               No leads yet.
             </TableCell>
           </TableRow>
@@ -219,7 +220,7 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                     {lead.viewed_at ? "Viewed" : "View"}
                   </Button>
                 </TableCell>
-                <TableCell colSpan={1}>
+                <TableCell>
                   <div className="mt-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Button

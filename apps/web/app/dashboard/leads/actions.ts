@@ -11,11 +11,19 @@ type LeadActionResult = {
 const RESOLUTION_STATUSES = ["won", "lost", "closed", "spam"] as const;
 type ResolutionStatus = (typeof RESOLUTION_STATUSES)[number];
 
-export async function markLeadViewedProviderAction(leadId: string): Promise<LeadActionResult> {
-  if (!leadId) {
-    return { ok: false, message: "Missing lead id." };
+class LeadAuthorizationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LeadAuthorizationError";
   }
+}
 
+type AuthorizedProviderContext = {
+  supabase: Awaited<ReturnType<typeof createServerSupabase>>;
+  providerId: string;
+};
+
+async function getAuthorizedProviderIdForLead(leadId: string): Promise<AuthorizedProviderContext> {
   const supabase = await createServerSupabase();
   const {
     data: { user },
@@ -23,7 +31,7 @@ export async function markLeadViewedProviderAction(leadId: string): Promise<Lead
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { ok: false, message: "Not authorized." };
+    throw new LeadAuthorizationError("Not authorized.");
   }
 
   const { data: leadRow, error: leadError } = await supabase
@@ -34,11 +42,11 @@ export async function markLeadViewedProviderAction(leadId: string): Promise<Lead
     .maybeSingle();
 
   if (leadError) {
-    return { ok: false, message: leadError.message };
+    throw new LeadAuthorizationError(leadError.message);
   }
 
   if (!leadRow?.provider_id) {
-    return { ok: false, message: "Lead not found." };
+    throw new LeadAuthorizationError("Lead not found.");
   }
 
   const { data: providerUser, error: providerError } = await supabase
@@ -50,7 +58,24 @@ export async function markLeadViewedProviderAction(leadId: string): Promise<Lead
     .maybeSingle();
 
   if (providerError || !providerUser) {
-    return { ok: false, message: "Not authorized." };
+    throw new LeadAuthorizationError("Not authorized.");
+  }
+
+  return { supabase, providerId: leadRow.provider_id };
+}
+
+export async function markLeadViewedProviderAction(leadId: string): Promise<LeadActionResult> {
+  if (!leadId) {
+    return { ok: false, message: "Missing lead id." };
+  }
+
+  let supabase: AuthorizedProviderContext["supabase"];
+  let providerId: string;
+
+  try {
+    ({ supabase, providerId } = await getAuthorizedProviderIdForLead(leadId));
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unknown error." };
   }
 
   const { error: updateError } = await supabase
@@ -58,7 +83,7 @@ export async function markLeadViewedProviderAction(leadId: string): Promise<Lead
     .from("leads")
     .update({ viewed_at: new Date().toISOString() })
     .eq("id", leadId)
-    .eq("provider_id", leadRow.provider_id)
+    .eq("provider_id", providerId)
     .is("viewed_at", null);
 
   if (updateError) {
@@ -74,41 +99,13 @@ export async function markLeadContactedProviderAction(leadId: string): Promise<L
     return { ok: false, message: "Missing lead id." };
   }
 
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  let supabase: AuthorizedProviderContext["supabase"];
+  let providerId: string;
 
-  if (userError || !user) {
-    return { ok: false, message: "Not authorized." };
-  }
-
-  const { data: leadRow, error: leadError } = await supabase
-    .schema("public")
-    .from("leads")
-    .select("provider_id")
-    .eq("id", leadId)
-    .maybeSingle();
-
-  if (leadError) {
-    return { ok: false, message: leadError.message };
-  }
-
-  if (!leadRow?.provider_id) {
-    return { ok: false, message: "Lead not found." };
-  }
-
-  const { data: providerUser, error: providerError } = await supabase
-    .schema("public")
-    .from("provider_users")
-    .select("provider_id")
-    .eq("user_id", user.id)
-    .eq("provider_id", leadRow.provider_id)
-    .maybeSingle();
-
-  if (providerError || !providerUser) {
-    return { ok: false, message: "Not authorized." };
+  try {
+    ({ supabase, providerId } = await getAuthorizedProviderIdForLead(leadId));
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unknown error." };
   }
 
   const { error: updateError } = await supabase
@@ -116,7 +113,7 @@ export async function markLeadContactedProviderAction(leadId: string): Promise<L
     .from("leads")
     .update({ last_contacted_at: new Date().toISOString() })
     .eq("id", leadId)
-    .eq("provider_id", leadRow.provider_id);
+    .eq("provider_id", providerId);
 
   if (updateError) {
     return { ok: false, message: updateError.message };
@@ -138,41 +135,13 @@ export async function setLeadResolvedProviderAction(
     return { ok: false, message: "Invalid resolution status." };
   }
 
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  let supabase: AuthorizedProviderContext["supabase"];
+  let providerId: string;
 
-  if (userError || !user) {
-    return { ok: false, message: "Not authorized." };
-  }
-
-  const { data: leadRow, error: leadError } = await supabase
-    .schema("public")
-    .from("leads")
-    .select("provider_id")
-    .eq("id", leadId)
-    .maybeSingle();
-
-  if (leadError) {
-    return { ok: false, message: leadError.message };
-  }
-
-  if (!leadRow?.provider_id) {
-    return { ok: false, message: "Lead not found." };
-  }
-
-  const { data: providerUser, error: providerError } = await supabase
-    .schema("public")
-    .from("provider_users")
-    .select("provider_id")
-    .eq("user_id", user.id)
-    .eq("provider_id", leadRow.provider_id)
-    .maybeSingle();
-
-  if (providerError || !providerUser) {
-    return { ok: false, message: "Not authorized." };
+  try {
+    ({ supabase, providerId } = await getAuthorizedProviderIdForLead(leadId));
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unknown error." };
   }
 
   const { error: updateError } = await supabase
@@ -183,7 +152,7 @@ export async function setLeadResolvedProviderAction(
       resolution_status: resolutionStatus,
     })
     .eq("id", leadId)
-    .eq("provider_id", leadRow.provider_id);
+    .eq("provider_id", providerId);
 
   if (updateError) {
     return { ok: false, message: updateError.message };
@@ -202,41 +171,13 @@ export async function setLeadFollowUpProviderAction(
     return { ok: false, message: "Missing lead id." };
   }
 
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  let supabase: AuthorizedProviderContext["supabase"];
+  let providerId: string;
 
-  if (userError || !user) {
-    return { ok: false, message: "Not authorized." };
-  }
-
-  const { data: leadRow, error: leadError } = await supabase
-    .schema("public")
-    .from("leads")
-    .select("provider_id")
-    .eq("id", leadId)
-    .maybeSingle();
-
-  if (leadError) {
-    return { ok: false, message: leadError.message };
-  }
-
-  if (!leadRow?.provider_id) {
-    return { ok: false, message: "Lead not found." };
-  }
-
-  const { data: providerUser, error: providerError } = await supabase
-    .schema("public")
-    .from("provider_users")
-    .select("provider_id")
-    .eq("user_id", user.id)
-    .eq("provider_id", leadRow.provider_id)
-    .maybeSingle();
-
-  if (providerError || !providerUser) {
-    return { ok: false, message: "Not authorized." };
+  try {
+    ({ supabase, providerId } = await getAuthorizedProviderIdForLead(leadId));
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unknown error." };
   }
 
   const followUpValue = followUpAt?.trim() ? new Date(followUpAt).toISOString() : null;
@@ -250,7 +191,7 @@ export async function setLeadFollowUpProviderAction(
       next_action: nextActionValue,
     })
     .eq("id", leadId)
-    .eq("provider_id", leadRow.provider_id);
+    .eq("provider_id", providerId);
 
   if (updateError) {
     return { ok: false, message: updateError.message };
