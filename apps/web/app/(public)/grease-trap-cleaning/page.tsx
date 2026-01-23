@@ -73,7 +73,7 @@ export default async function GreaseTrapCleaningPage({ searchParams }: GreaseTra
               <Link href="#metros">Browse providers</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/get-started">List your business</Link>
+              <Link href="/request-quote">Request a quote</Link>
             </Button>
           </div>
         </div>

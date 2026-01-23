@@ -8,7 +8,6 @@ import { Badge } from "../../../../../components/ui/badge";
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { Input } from "../../../../../components/ui/input";
-import { isProviderVerified } from "../../../../../lib/public/verified";
 
 type ProviderRow = {
   id: string;
@@ -19,6 +18,7 @@ type ProviderRow = {
   phone: string | null;
   website_url: string | null;
   description: string | null;
+  provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
 };
 
 type ProvidersGridProps = {
@@ -95,7 +95,7 @@ export default function ProvidersGrid({
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {providers.map((provider) => {
-            const isVerified = isProviderVerified(provider);
+            const providerState = provider.provider_state;
             const locationLabel =
               provider.city && provider.state
                 ? `${provider.city}, ${provider.state}`
@@ -110,7 +110,7 @@ export default function ProvidersGrid({
                         {provider.business_name}
                       </Link>
                     </CardTitle>
-                    {isVerified ? (
+                    {providerState === "VERIFIED" ? (
                       <Badge variant="outline" className="flex items-center gap-1">
                         <ShieldCheck className="h-3.5 w-3.5" />
                         Verified

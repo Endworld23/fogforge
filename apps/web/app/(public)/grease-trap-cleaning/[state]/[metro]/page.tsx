@@ -16,6 +16,7 @@ import { MapPin, ShieldCheck } from "lucide-react";
 import { createServerSupabaseReadOnly } from "../../../../../lib/supabase/server";
 import { cn } from "../../../../../lib/utils";
 import { getSiteUrl } from "../../../../../lib/seo";
+import { getProviderState } from "../../../../../lib/providers/providerState";
 import ProvidersGrid from "./ProvidersGrid";
 
 const PAGE_SIZE = 20;
@@ -34,6 +35,7 @@ type ProviderRow = {
   phone: string | null;
   website_url: string | null;
   description: string | null;
+  provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
 };
 
 const siteUrl = getSiteUrl();
@@ -112,9 +114,10 @@ export default async function MetroCategoryPage({
         let query = supabase
           .schema("public")
           .from("providers")
-          .select("id, slug, business_name, city, state, phone, website_url, description", {
-            count: "exact",
-          })
+          .select(
+            "id, slug, business_name, city, state, phone, website_url, description, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id",
+            { count: "exact" }
+          )
           .eq("metro_id", metroId)
           .eq("category_id", categoryId)
           .eq("is_published", true)
@@ -140,6 +143,13 @@ export default async function MetroCategoryPage({
     phone: provider.phone ?? null,
     website_url: provider.website_url ?? null,
     description: provider.description ?? null,
+    provider_state: getProviderState({
+      claim_status: provider.claim_status,
+      verified_at: provider.verified_at,
+      claimed_by_user_id: provider.claimed_by_user_id,
+      is_claimed: provider.is_claimed,
+      user_id: provider.user_id,
+    }),
   }));
   const totalCount = count ?? 0;
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / PAGE_SIZE);
@@ -191,7 +201,7 @@ export default async function MetroCategoryPage({
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr] lg:items-start">
-        <div className="space-y-6">
+        <div id="providers" className="space-y-6">
           {!isSearching && providers.length === 0 && !error ? (
             <Card>
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
@@ -268,7 +278,9 @@ export default async function MetroCategoryPage({
               </div>
               <Separator />
               <Button asChild className="w-full">
-                <Link href="/grease-trap-cleaning">Request quotes</Link>
+                <Link href={`/grease-trap-cleaning/${resolvedParams.state}/${resolvedParams.metro}/request-quote`}>
+                  Request quotes
+                </Link>
               </Button>
             </CardContent>
           </Card>

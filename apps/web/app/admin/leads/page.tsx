@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminPageHeader from "../../../components/admin/AdminPageHeader";
 import { Alert, AlertDescription, AlertTitle } from "../../../components/ui/alert";
 import { Badge } from "../../../components/ui/badge";
+import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { isAdminServer } from "../../../lib/auth/isAdminServer";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
@@ -101,6 +103,9 @@ export default async function AdminLeadsPage() {
         action={
           <>
             <CreateTestLeadDialog providers={providers} />
+            <Button asChild variant="outline">
+              <Link href="/admin/leads/board">Board view</Link>
+            </Button>
             <Badge variant="secondary">{leads.length} leads</Badge>
           </>
         }

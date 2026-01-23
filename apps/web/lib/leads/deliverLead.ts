@@ -19,6 +19,10 @@ type LeadDetails = {
   message: string | null;
   source_url: string | null;
   created_at: string;
+  requester_first_name: string | null;
+  requester_last_name: string | null;
+  requester_business_name: string | null;
+  requester_address: string | null;
 };
 
 const MAX_ERROR_LENGTH = 500;
@@ -37,7 +41,7 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
     .schema("public")
     .from("leads")
     .select(
-      "id, provider_id, metro_id, category_id, name, email, phone, message, source_url, created_at"
+      "id, provider_id, metro_id, category_id, name, email, phone, message, source_url, created_at, requester_first_name, requester_last_name, requester_business_name, requester_address"
     )
     .eq("id", leadId)
     .maybeSingle();
@@ -136,11 +140,18 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
   const providerName = providerRow.business_name ?? "Provider";
   const metroLabel = metroRow?.name ?? "Unknown metro";
   const categoryLabel = categoryRow?.name ?? "Service";
+  const requesterName = [lead.requester_first_name, lead.requester_last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
   const subject = `New quote request: ${providerName} (${metroLabel})`;
   const bodyLines = [
     `Provider: ${providerName}`,
     `Category: ${categoryLabel}`,
     `Metro: ${metroLabel}`,
+    `Requester: ${requesterName || lead.name}`,
+    `Business: ${lead.requester_business_name ?? "N/A"}`,
+    `Address: ${lead.requester_address ?? "N/A"}`,
     `Name: ${lead.name}`,
     `Email: ${lead.email}`,
     `Phone: ${lead.phone ?? "N/A"}`,

@@ -74,7 +74,7 @@ export default function MetroDirectoryClient({
             <Input
               id="metro-search"
               className="pl-9"
-              placeholder="Search by metro name"
+              placeholder="Search by metro or city"
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -134,7 +134,7 @@ export default function MetroDirectoryClient({
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
-            Filter by metro name or choose a state. Try &quot;TX&quot; or &quot;Texas&quot;.
+            Find a cleaner near your kitchen. Try &quot;Houston&quot; or &quot;TX&quot;.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -181,24 +181,27 @@ export default function MetroDirectoryClient({
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredMetros.map((metro) => (
-            <Card key={metro.id} className="transition hover:border-primary/40">
-              <CardHeader>
-                <CardTitle className="text-lg">{metro.name}</CardTitle>
-                <Badge className="mt-2 w-fit" variant="outline">
-                  {metro.state}
-                </Badge>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>Explore providers</span>
-                <Link
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                  href={`/grease-trap-cleaning/${metro.state.toLowerCase()}/${metro.slug}`}
-                >
-                  View
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </CardContent>
-            </Card>
+            <Link
+              key={metro.id}
+              className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              href={`/grease-trap-cleaning/${metro.state.toLowerCase()}/${metro.slug}`}
+            >
+              <Card className="transition group-hover:border-primary/40">
+                <CardHeader>
+                  <CardTitle className="text-lg">{metro.name}</CardTitle>
+                  <Badge className="mt-2 w-fit" variant="outline">
+                    {metro.state}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>Explore providers</span>
+                  <span className="inline-flex items-center gap-1 text-primary group-hover:underline">
+                    View
+                    <ChevronRight className="h-4 w-4" />
+                  </span>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

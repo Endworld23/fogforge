@@ -1,34 +1,27 @@
 import Link from "next/link";
-import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { getUserContext } from "../../../lib/auth/getUserContext";
-import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
-import LeadsTable from "./LeadsTable";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card";
+import { Button } from "../../../../components/ui/button";
+import { getUserContext } from "../../../../lib/auth/getUserContext";
+import { createServerSupabaseReadOnly } from "../../../../lib/supabase/server";
+import LeadsBoard from "./LeadsBoard";
 
 export const dynamic = "force-dynamic";
 
 type LeadRowUI = {
   id: string;
   created_at: string;
-  status: string;
   viewed_at: string | null;
   last_contacted_at: string | null;
   resolved_at: string | null;
-  escalated_at: string | null;
   resolution_status: string | null;
+  escalated_at: string | null;
   delivery_status: string;
-  delivered_at: string | null;
-  delivery_error: string | null;
   name: string;
-  email: string;
   phone: string | null;
-  message: string | null;
-  source_url: string | null;
-  follow_up_at: string | null;
-  next_action: string | null;
+  metro: { name: string; state: string } | null;
 };
 
-export default async function DashboardLeadsPage() {
+export default async function DashboardLeadsBoardPage() {
   const { isAdmin, providerUser } = await getUserContext();
 
   if (!providerUser && isAdmin) {
@@ -67,7 +60,7 @@ export default async function DashboardLeadsPage() {
     .schema("public")
     .from("leads")
     .select(
-      "id, created_at, status, viewed_at, last_contacted_at, resolved_at, escalated_at, resolution_status, follow_up_at, next_action, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url"
+      "id, created_at, viewed_at, last_contacted_at, resolved_at, escalated_at, resolution_status, delivery_status, name, phone, metros(name,state)"
     )
     .eq("provider_id", providerId)
     .order("created_at", { ascending: false });
@@ -75,34 +68,27 @@ export default async function DashboardLeadsPage() {
   const leads: LeadRowUI[] = (data ?? []).map((lead) => ({
     id: lead.id,
     created_at: lead.created_at,
-    status: lead.status,
     viewed_at: lead.viewed_at ?? null,
     last_contacted_at: lead.last_contacted_at ?? null,
     resolved_at: lead.resolved_at ?? null,
     escalated_at: lead.escalated_at ?? null,
     resolution_status: lead.resolution_status ?? null,
     delivery_status: lead.delivery_status ?? "pending",
-    delivered_at: lead.delivered_at ?? null,
-    delivery_error: lead.delivery_error ?? null,
     name: lead.name,
-    email: lead.email,
     phone: lead.phone ?? null,
-    message: lead.message ?? null,
-    source_url: lead.source_url ?? null,
-    follow_up_at: lead.follow_up_at ?? null,
-    next_action: lead.next_action ?? null,
+    metro: lead.metros?.[0] ?? null,
   }));
 
   return (
     <Card>
       <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-        <CardTitle>Leads</CardTitle>
+        <CardTitle>Leads Board</CardTitle>
         <Button asChild variant="outline" size="sm">
-          <Link href="/dashboard/leads/board">Board view</Link>
+          <Link href="/dashboard/leads">List view</Link>
         </Button>
       </CardHeader>
       <CardContent>
-        <LeadsTable leads={leads} />
+        <LeadsBoard leads={leads} />
       </CardContent>
     </Card>
   );

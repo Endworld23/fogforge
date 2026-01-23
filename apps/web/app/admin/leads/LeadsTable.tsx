@@ -382,6 +382,12 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
             const canResend = lead.delivery_status !== "delivered";
             const isTestLead = lead.source_url === "admin://test-lead";
             const stateBadge = getStateBadge(lead);
+            const metroLabel = lead.metro ? `${lead.metro.name}, ${lead.metro.state}` : "Unknown";
+            const providerLabel = lead.provider?.business_name
+              ? `${lead.provider.business_name}`
+              : lead.metro
+                ? `Metro Pool — ${metroLabel}`
+                : "Metro Pool";
             const followUpValue =
               followUpDrafts[lead.id] ?? toLocalInputValue(lead.follow_up_at);
             const nextActionValue = nextActionDrafts[lead.id] ?? (lead.next_action ?? "");
@@ -407,21 +413,19 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                             lead.metro.slug
                           }/${lead.provider.slug}`}
                         >
-                          {lead.provider.business_name}
+                          <div>{providerLabel}</div>
+                          <div className="text-xs text-muted-foreground">Metro: {metroLabel}</div>
                         </Link>
                       ) : (
-                        lead.provider?.business_name ?? "Unknown"
+                        <div>
+                          <div>{providerLabel}</div>
+                          {lead.provider?.business_name ? (
+                            <div className="text-xs text-muted-foreground">Metro: {metroLabel}</div>
+                          ) : null}
+                        </div>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {lead.metro ? (
-                        <span>
-                          {lead.metro.name}, {lead.metro.state}
-                        </span>
-                      ) : (
-                        "Unknown"
-                      )}
-                    </TableCell>
+                    <TableCell>{metroLabel}</TableCell>
                     <TableCell>{lead.name}</TableCell>
                     <TableCell>{lead.email}</TableCell>
                     <TableCell>{lead.phone ?? "—"}</TableCell>

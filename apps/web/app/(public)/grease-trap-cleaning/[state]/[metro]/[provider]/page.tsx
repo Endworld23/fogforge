@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Breadcrumb,
@@ -19,10 +20,9 @@ import {
 } from "../../../../../../components/ui/card";
 import { Separator } from "../../../../../../components/ui/separator";
 import { Globe, MapPin, Phone, ShieldCheck } from "lucide-react";
-import { isProviderVerified } from "../../../../../../lib/public/verified";
 import { createServerSupabaseReadOnly } from "../../../../../../lib/supabase/server";
 import { getSiteUrl } from "../../../../../../lib/seo";
-import LeadForm from "./LeadForm";
+import { getProviderState } from "../../../../../../lib/providers/providerState";
 
 type ProviderPageProps = {
   params: Promise<{ state: string; metro: string; provider: string }>;
@@ -38,8 +38,13 @@ type ProviderRow = {
   website_url: string | null;
   description: string | null;
   is_published: boolean;
-  metros: { id: string; name: string; slug: string; state: string } | null;
-  categories: { id: string; slug: string; name: string } | null;
+  claim_status: string | null;
+  verified_at: string | null;
+  claimed_by_user_id: string | null;
+  is_claimed: boolean | null;
+  user_id: string | null;
+  metros: { id: string; name: string; slug: string; state: string };
+  categories: { id: string; slug: string; name: string };
 };
 
 const siteUrl = getSiteUrl();
@@ -49,22 +54,29 @@ export async function generateMetadata({
 }: ProviderPageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const supabase = await createServerSupabaseReadOnly();
-  const { data } = await supabase
+  const { data: providerData } = await supabase
     .schema("public")
     .from("providers")
-    .select(
-      "business_name, city, state, metros!inner(name,slug,state), categories!inner(slug)"
-    )
+    .select("business_name, city, state, metro_id")
     .eq("slug", resolvedParams.provider)
-    .eq("metros.slug", resolvedParams.metro)
-    .eq("categories.slug", "grease-trap-cleaning")
     .eq("is_published", true)
     .eq("status", "active")
     .maybeSingle();
 
-  const providerName = data?.business_name ?? "Provider";
-  const city = data?.city ?? "Local";
-  const state = data?.state ?? resolvedParams.state.toUpperCase();
+  const { data: metroData } = providerData?.metro_id
+    ? await supabase
+        .schema("public")
+        .from("metros")
+        .select("name, slug, state")
+        .eq("id", providerData.metro_id)
+        .maybeSingle()
+    : { data: null };
+
+  const providerName = providerData?.business_name ?? "Provider";
+  const city = providerData?.city ?? "Local";
+  const state =
+    (metroData?.slug === resolvedParams.metro ? metroData?.state : providerData?.state) ??
+    resolvedParams.state.toUpperCase();
   const title = `${providerName} – Grease Trap Cleaning in ${city}, ${state}`;
   const description = `Contact ${providerName} for grease trap cleaning services in ${city}, ${state}. Request a quote or call today.`;
   const canonical = siteUrl
@@ -87,41 +99,73 @@ export async function generateMetadata({
 export default async function ProviderDetailPage({ params }: ProviderPageProps) {
   const resolvedParams = await params;
   const supabase = await createServerSupabaseReadOnly();
-  const { data, error } = await supabase
+  const { data: providerData, error: providerError } = await supabase
     .schema("public")
     .from("providers")
     .select(
-      "id, slug, business_name, city, state, phone, website_url, description, is_published, metros!inner(id,name,slug,state), categories!inner(id,slug,name)"
+      "id, slug, business_name, city, state, phone, website_url, description, is_published, metro_id, category_id, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
     )
     .eq("slug", resolvedParams.provider)
-    .eq("metros.slug", resolvedParams.metro)
-    .eq("categories.slug", "grease-trap-cleaning")
     .eq("is_published", true)
     .eq("status", "active")
     .maybeSingle();
 
-  const provider: ProviderRow | null = data
-    ? {
-        id: data.id,
-        slug: data.slug,
-        business_name: data.business_name,
-        city: data.city,
-        state: data.state,
-        phone: data.phone ?? null,
-        website_url: data.website_url ?? null,
-        description: data.description ?? null,
-        is_published: data.is_published,
-        metros: data.metros?.[0] ?? null,
-        categories: data.categories?.[0] ?? null,
-      }
-    : null;
-
-  if (error || !provider || !provider.metros || !provider.categories) {
+  if (providerError || !providerData) {
     notFound();
   }
 
+  const [{ data: metroData, error: metroError }, { data: categoryData, error: categoryError }] =
+    await Promise.all([
+      providerData.metro_id
+        ? supabase
+            .schema("public")
+            .from("metros")
+            .select("id, name, slug, state")
+            .eq("id", providerData.metro_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      providerData.category_id
+        ? supabase
+            .schema("public")
+            .from("categories")
+            .select("id, slug, name")
+            .eq("id", providerData.category_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+
+  if (
+    metroError ||
+    categoryError ||
+    !metroData ||
+    !categoryData ||
+    metroData.slug !== resolvedParams.metro ||
+    categoryData.slug !== "grease-trap-cleaning"
+  ) {
+    notFound();
+  }
+
+  const provider: ProviderRow = {
+    id: providerData.id,
+    slug: providerData.slug,
+    business_name: providerData.business_name,
+    city: providerData.city,
+    state: providerData.state,
+    phone: providerData.phone ?? null,
+    website_url: providerData.website_url ?? null,
+    description: providerData.description ?? null,
+    is_published: providerData.is_published,
+    claim_status: providerData.claim_status ?? null,
+    verified_at: providerData.verified_at ?? null,
+    claimed_by_user_id: providerData.claimed_by_user_id ?? null,
+    is_claimed: providerData.is_claimed ?? null,
+    user_id: providerData.user_id ?? null,
+    metros: metroData,
+    categories: categoryData,
+  };
+
   const categoryLabel = provider.categories?.name ?? "Grease Trap Cleaning";
-  const isVerified = isProviderVerified(provider);
+  const providerState = getProviderState(provider);
   const locationLabel =
     provider.city && provider.state ? `${provider.city}, ${provider.state}` : "Location not set";
 
@@ -166,7 +210,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">Published</Badge>
-            {isVerified ? (
+            {providerState === "VERIFIED" ? (
               <Badge variant="outline" className="flex items-center gap-1">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Verified
@@ -242,15 +286,17 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
             <CardHeader>
               <CardTitle>Request a Quote</CardTitle>
               <CardDescription>
-                Tell us a bit about your needs and we&apos;ll send your request to the provider.
+                Tell us what you need and we&apos;ll send your request to the provider.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <LeadForm
-                providerId={provider.id}
-                categoryId={provider.categories.id}
-                metroId={provider.metros.id}
-              />
+              <Button asChild className="w-full">
+                <Link
+                  href={`/grease-trap-cleaning/${resolvedParams.state}/${resolvedParams.metro}/${provider.slug}/request-quote`}
+                >
+                  Request a quote
+                </Link>
+              </Button>
               <Card className="border-border/70 bg-muted/40">
                 <CardHeader>
                   <CardTitle className="text-base">Quick facts</CardTitle>

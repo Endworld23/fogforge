@@ -29,7 +29,7 @@ export default function HomePage() {
               showButton={false}
             />
             <Button asChild>
-              <Link href="/grease-trap-cleaning">Browse metros</Link>
+              <Link href="/grease-trap-cleaning">Find grease trap cleaners</Link>
             </Button>
           </div>
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -46,14 +46,12 @@ export default function HomePage() {
               Local pros
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button asChild>
-              <Link href="/grease-trap-cleaning">Find providers</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/onboarding">List your business</Link>
-            </Button>
-          </div>
+          <Link
+            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            href="/get-started?mode=list"
+          >
+            Own a business? List or claim your profile
+          </Link>
         </div>
         <Card className="relative overflow-hidden border-border bg-gradient-to-br from-primary/10 via-background to-muted p-6">
           <div className="space-y-4">

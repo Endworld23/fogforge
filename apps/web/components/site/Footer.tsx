@@ -16,6 +16,9 @@ export default function Footer() {
             <Link className="hover:text-foreground" href="/grease-trap-cleaning">
               Category
             </Link>
+            <Link className="hover:text-foreground" href="/get-started?mode=list">
+              List or claim your business
+            </Link>
             <Link className="hover:text-foreground" href="/login">
               Admin / Login
             </Link>
