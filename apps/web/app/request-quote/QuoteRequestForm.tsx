@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
+import { cn } from "../../lib/utils";
 import { submitQuoteRequestAction } from "./actions";
 
 type MetroRow = {
@@ -32,7 +33,7 @@ type QuoteRequestFormProps = {
 
 type QuoteRequestResult = {
   ok: boolean;
-  message: string;
+  message?: string;
   fieldErrors?: Record<string, string>;
   formError?: string;
 };
@@ -66,6 +67,8 @@ export default function QuoteRequestForm({
   const [zip, setZip] = useState("");
   const [message, setMessage] = useState("");
   const fieldErrors = result.fieldErrors ?? {};
+  const errorInputClass =
+    "border-rose-500 ring-1 ring-rose-500 focus-visible:ring-rose-500";
 
   useEffect(() => {
     setSourceUrl(window.location.href);
@@ -207,6 +210,8 @@ export default function QuoteRequestForm({
             name="first_name"
             autoComplete="given-name"
             required
+            aria-invalid={Boolean(fieldErrors.first_name)}
+            className={cn(fieldErrors.first_name ? errorInputClass : null)}
             value={firstName}
             onChange={(event) => setFirstName(event.target.value)}
           />
@@ -223,6 +228,8 @@ export default function QuoteRequestForm({
             name="last_name"
             autoComplete="family-name"
             required
+            aria-invalid={Boolean(fieldErrors.last_name)}
+            className={cn(fieldErrors.last_name ? errorInputClass : null)}
             value={lastName}
             onChange={(event) => setLastName(event.target.value)}
           />
@@ -242,6 +249,8 @@ export default function QuoteRequestForm({
             name="business_name"
             autoComplete="organization"
             required
+            aria-invalid={Boolean(fieldErrors.business_name)}
+            className={cn(fieldErrors.business_name ? errorInputClass : null)}
             value={businessName}
             onChange={(event) => setBusinessName(event.target.value)}
           />
@@ -258,6 +267,8 @@ export default function QuoteRequestForm({
             name="address_line1"
             autoComplete="address-line1"
             required
+            aria-invalid={Boolean(fieldErrors.address_line1)}
+            className={cn(fieldErrors.address_line1 ? errorInputClass : null)}
             value={addressLine1}
             onChange={(event) => setAddressLine1(event.target.value)}
           />
@@ -276,6 +287,8 @@ export default function QuoteRequestForm({
             id="address_line2"
             name="address_line2"
             autoComplete="address-line2"
+            aria-invalid={Boolean(fieldErrors.address_line2)}
+            className={cn(fieldErrors.address_line2 ? errorInputClass : null)}
             value={addressLine2}
             onChange={(event) => setAddressLine2(event.target.value)}
           />
@@ -289,6 +302,8 @@ export default function QuoteRequestForm({
             name="city"
             autoComplete="address-level2"
             required
+            aria-invalid={Boolean(fieldErrors.city)}
+            className={cn(fieldErrors.city ? errorInputClass : null)}
             value={city}
             onChange={(event) => setCity(event.target.value)}
           />
@@ -309,7 +324,11 @@ export default function QuoteRequestForm({
             <select
               id="state"
               name="state"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className={cn(
+                "h-10 w-full rounded-md border border-input bg-background px-3 text-sm",
+                fieldErrors.state ? errorInputClass : null
+              )}
+              aria-invalid={Boolean(fieldErrors.state)}
               value={selectedState}
               onChange={(event) => {
                 setSelectedState(event.target.value);
@@ -336,6 +355,8 @@ export default function QuoteRequestForm({
             name="zip"
             autoComplete="postal-code"
             required
+            aria-invalid={Boolean(fieldErrors.zip)}
+            className={cn(fieldErrors.zip ? errorInputClass : null)}
             value={zip}
             onChange={(event) => setZip(event.target.value)}
           />
@@ -354,6 +375,8 @@ export default function QuoteRequestForm({
             type="email"
             autoComplete="email"
             required
+            aria-invalid={Boolean(fieldErrors.email)}
+            className={cn(fieldErrors.email ? errorInputClass : null)}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
@@ -368,6 +391,8 @@ export default function QuoteRequestForm({
             name="phone"
             autoComplete="tel"
             required
+            aria-invalid={Boolean(fieldErrors.phone)}
+            className={cn(fieldErrors.phone ? errorInputClass : null)}
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
           />
@@ -391,7 +416,11 @@ export default function QuoteRequestForm({
             <select
               id="metroId"
               name="metroId"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className={cn(
+                "h-10 w-full rounded-md border border-input bg-background px-3 text-sm",
+                fieldErrors.metroId ? errorInputClass : null
+              )}
+              aria-invalid={Boolean(fieldErrors.metroId)}
               value={selectedMetroId}
               onChange={(event) => setSelectedMetroId(event.target.value)}
               required
@@ -416,7 +445,11 @@ export default function QuoteRequestForm({
           id="message"
           name="message"
           rows={4}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className={cn(
+            "w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            fieldErrors.message ? errorInputClass : null
+          )}
+          aria-invalid={Boolean(fieldErrors.message)}
           placeholder="Describe your cleaning schedule, timeline, and any special needs."
           value={message}
           onChange={(event) => setMessage(event.target.value)}

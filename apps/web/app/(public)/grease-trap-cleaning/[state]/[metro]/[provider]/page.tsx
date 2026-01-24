@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   Breadcrumb,
@@ -23,6 +24,7 @@ import { Globe, MapPin, Phone, ShieldCheck } from "lucide-react";
 import { createServerSupabaseReadOnly } from "../../../../../../lib/supabase/server";
 import { getSiteUrl } from "../../../../../../lib/seo";
 import { getProviderState } from "../../../../../../lib/providers/providerState";
+import { getPublicStorageUrl } from "../../../../../../lib/supabase/storageUrl";
 
 type ProviderPageProps = {
   params: Promise<{ state: string; metro: string; provider: string }>;
@@ -38,6 +40,7 @@ type ProviderRow = {
   website_url: string | null;
   description: string | null;
   is_published: boolean;
+  logo_path?: string | null;
   claim_status: string | null;
   verified_at: string | null;
   claimed_by_user_id: string | null;
@@ -103,7 +106,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     .schema("public")
     .from("providers")
     .select(
-      "id, slug, business_name, city, state, phone, website_url, description, is_published, metro_id, category_id, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
+      "id, slug, business_name, city, state, phone, website_url, description, logo_path, is_published, metro_id, category_id, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
     )
     .eq("slug", resolvedParams.provider)
     .eq("is_published", true)
@@ -114,8 +117,11 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     notFound();
   }
 
-  const [{ data: metroData, error: metroError }, { data: categoryData, error: categoryError }] =
-    await Promise.all([
+  const [
+    { data: metroData, error: metroError },
+    { data: categoryData, error: categoryError },
+    { data: photos },
+  ] = await Promise.all([
       providerData.metro_id
         ? supabase
             .schema("public")
@@ -132,6 +138,12 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
             .eq("id", providerData.category_id)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      supabase
+        .schema("public")
+        .from("provider_photos")
+        .select("id, path")
+        .eq("provider_id", providerData.id)
+        .order("created_at", { ascending: false }),
     ]);
 
   if (
@@ -155,6 +167,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     website_url: providerData.website_url ?? null,
     description: providerData.description ?? null,
     is_published: providerData.is_published,
+    logo_path: providerData.logo_path ?? null,
     claim_status: providerData.claim_status ?? null,
     verified_at: providerData.verified_at ?? null,
     claimed_by_user_id: providerData.claimed_by_user_id ?? null,
@@ -168,6 +181,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
   const providerState = getProviderState(provider);
   const locationLabel =
     provider.city && provider.state ? `${provider.city}, ${provider.state}` : "Location not set";
+  const logoUrl = getPublicStorageUrl("provider-logos", provider.logo_path ?? null);
 
   if (!provider.is_published) {
     notFound();
@@ -200,6 +214,16 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
         </Badge>
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
+            {logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt={`${provider.business_name} logo`}
+                width={56}
+                height={56}
+                className="h-14 w-14 rounded-full border border-border object-cover"
+                unoptimized
+              />
+            ) : null}
             <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
               {provider.business_name}
             </h1>
@@ -246,6 +270,29 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
           )}
         </div>
       </header>
+
+      {photos?.length ? (
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {photos.map((photo) => {
+            const photoUrl = getPublicStorageUrl("provider-photos", photo.path);
+            if (!photoUrl) {
+              return null;
+            }
+            return (
+              <Card key={photo.id} className="overflow-hidden">
+                <Image
+                  src={photoUrl}
+                  alt={`${provider.business_name} photo`}
+                  width={640}
+                  height={360}
+                  className="h-48 w-full object-cover"
+                  unoptimized
+                />
+              </Card>
+            );
+          })}
+        </section>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
         <div className="order-2 space-y-6 lg:order-1">

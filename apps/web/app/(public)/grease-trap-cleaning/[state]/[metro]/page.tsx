@@ -35,6 +35,7 @@ type ProviderRow = {
   phone: string | null;
   website_url: string | null;
   description: string | null;
+  logo_path: string | null;
   provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
 };
 
@@ -115,7 +116,7 @@ export default async function MetroCategoryPage({
           .schema("public")
           .from("providers")
           .select(
-            "id, slug, business_name, city, state, phone, website_url, description, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id",
+            "id, slug, business_name, city, state, phone, website_url, description, logo_path, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id",
             { count: "exact" }
           )
           .eq("metro_id", metroId)
@@ -143,6 +144,7 @@ export default async function MetroCategoryPage({
     phone: provider.phone ?? null,
     website_url: provider.website_url ?? null,
     description: provider.description ?? null,
+    logo_path: provider.logo_path ?? null,
     provider_state: getProviderState({
       claim_status: provider.claim_status,
       verified_at: provider.verified_at,

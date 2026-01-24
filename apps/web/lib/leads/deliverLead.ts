@@ -2,6 +2,7 @@
 
 import { Resend } from "resend";
 import { createServerSupabase } from "../supabase/server";
+import { recordLeadEvent } from "./recordLeadEvent";
 
 type DeliverLeadResult = {
   ok: boolean;
@@ -86,6 +87,12 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
         delivery_error: errorMessage,
       })
       .eq("id", leadId);
+    await recordLeadEvent({
+      leadId,
+      actorType: "system",
+      eventType: "delivery_failed",
+      data: { reason: errorMessage },
+    });
     return { ok: false, message: errorMessage };
   }
   if (!providerRow) {
@@ -99,6 +106,12 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
         delivery_error: missingMessage,
       })
       .eq("id", leadId);
+    await recordLeadEvent({
+      leadId,
+      actorType: "system",
+      eventType: "delivery_failed",
+      data: { reason: missingMessage },
+    });
     return { ok: false, message: missingMessage };
   }
 
@@ -115,11 +128,17 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
       .schema("public")
       .from("leads")
       .update({
-        delivery_status: "failed",
+        delivery_status: "skipped",
         delivered_at: null,
         delivery_error: missingMessage,
       })
       .eq("id", leadId);
+    await recordLeadEvent({
+      leadId,
+      actorType: "system",
+      eventType: "delivery_skipped",
+      data: { reason: missingMessage, provider_id: lead.provider_id },
+    });
     return { ok: false, message: missingMessage };
   }
 
@@ -129,11 +148,17 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
       .schema("public")
       .from("leads")
       .update({
-        delivery_status: "failed",
+        delivery_status: "skipped",
         delivered_at: null,
         delivery_error: configMessage,
       })
       .eq("id", leadId);
+    await recordLeadEvent({
+      leadId,
+      actorType: "system",
+      eventType: "delivery_skipped",
+      data: { reason: configMessage, provider_id: lead.provider_id },
+    });
     return { ok: false, message: configMessage };
   }
 
@@ -161,6 +186,13 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
   ];
   const bccRecipient = bccEmail && bccEmail !== recipientEmail ? bccEmail : undefined;
 
+  await recordLeadEvent({
+    leadId,
+    actorType: "system",
+    eventType: "delivery_attempted",
+    data: { provider_id: lead.provider_id, recipient: recipientEmail },
+  });
+
   try {
     const resend = new Resend(resendApiKey);
     await resend.emails.send({
@@ -183,6 +215,12 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
         delivery_error: failureMessage,
       })
       .eq("id", leadId);
+    await recordLeadEvent({
+      leadId,
+      actorType: "system",
+      eventType: "delivery_failed",
+      data: { reason: failureMessage, provider_id: lead.provider_id },
+    });
     return { ok: false, message: failureMessage };
   }
 
@@ -199,6 +237,13 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
   if (updateError) {
     return { ok: false, message: updateError.message };
   }
+
+  await recordLeadEvent({
+    leadId,
+    actorType: "system",
+    eventType: "delivery_succeeded",
+    data: { provider_id: lead.provider_id, recipient: recipientEmail },
+  });
 
   return { ok: true, message: "Lead delivered via email." };
 }

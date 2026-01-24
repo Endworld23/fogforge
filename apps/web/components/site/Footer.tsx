@@ -20,7 +20,7 @@ export default function Footer() {
               List or claim your business
             </Link>
             <Link className="hover:text-foreground" href="/login">
-              Admin / Login
+              Business login
             </Link>
             <Link className="hover:text-foreground" href="#">
               Privacy

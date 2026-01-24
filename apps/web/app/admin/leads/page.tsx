@@ -6,6 +6,7 @@ import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { isAdminServer } from "../../../lib/auth/isAdminServer";
+import { getProviderState } from "../../../lib/providers/providerState";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
 import CreateTestLeadDialog from "./CreateTestLeadDialog";
 import LeadsTable from "./LeadsTable";
@@ -15,6 +16,8 @@ export const dynamic = "force-dynamic";
 type LeadRowDTO = {
   id: string;
   created_at: string;
+  provider_id: string | null;
+  metro_id: string | null;
   status: string;
   viewed_at: string | null;
   last_contacted_at: string | null;
@@ -40,6 +43,14 @@ type LeadRowDTO = {
 type ProviderOption = {
   id: string;
   business_name: string | null;
+  metro_id: string | null;
+  is_published?: boolean | null;
+  status?: string | null;
+  claim_status?: string | null;
+  verified_at?: string | null;
+  claimed_by_user_id?: string | null;
+  is_claimed?: boolean | null;
+  user_id?: string | null;
 };
 
 export default async function AdminLeadsPage() {
@@ -55,19 +66,23 @@ export default async function AdminLeadsPage() {
       .schema("public")
       .from("leads")
       .select(
-        "id, created_at, status, viewed_at, last_contacted_at, resolved_at, resolution_status, escalated_at, escalation_reason, follow_up_at, next_action, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url, providers(business_name,slug), metros(name,slug,state), categories(slug,name)"
+        "id, created_at, provider_id, metro_id, status, viewed_at, last_contacted_at, resolved_at, resolution_status, escalated_at, escalation_reason, follow_up_at, next_action, delivery_status, delivered_at, delivery_error, name, email, phone, message, source_url, providers(business_name,slug), metros(name,slug,state), categories(slug,name)"
       )
       .order("created_at", { ascending: false }),
     supabase
       .schema("public")
       .from("providers")
-      .select("id, business_name")
+      .select(
+        "id, business_name, metro_id, is_published, status, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
+      )
       .order("business_name", { ascending: true }),
   ]);
 
   const leads: LeadRowDTO[] = (data ?? []).map((row) => ({
     id: row.id,
     created_at: row.created_at,
+    provider_id: row.provider_id ?? null,
+    metro_id: row.metro_id ?? null,
     status: row.status,
     viewed_at: row.viewed_at ?? null,
     last_contacted_at: row.last_contacted_at ?? null,
@@ -93,7 +108,32 @@ export default async function AdminLeadsPage() {
   const providers: ProviderOption[] = (providersData ?? []).map((row) => ({
     id: row.id,
     business_name: row.business_name ?? null,
+    metro_id: row.metro_id ?? null,
+    is_published: row.is_published ?? null,
+    status: row.status ?? null,
+    claim_status: row.claim_status ?? null,
+    verified_at: row.verified_at ?? null,
+    claimed_by_user_id: row.claimed_by_user_id ?? null,
+    is_claimed: row.is_claimed ?? null,
+    user_id: row.user_id ?? null,
   }));
+
+  const providerOptionsByMetro = providers
+    .filter(
+      (provider) =>
+        provider.metro_id &&
+        provider.is_published &&
+        provider.status === "active" &&
+        getProviderState(provider) === "VERIFIED"
+    )
+    .reduce<Record<string, { id: string; business_name: string | null }[]>>((acc, provider) => {
+      if (!provider.metro_id) return acc;
+      if (!acc[provider.metro_id]) {
+        acc[provider.metro_id] = [];
+      }
+      acc[provider.metro_id].push({ id: provider.id, business_name: provider.business_name ?? null });
+      return acc;
+    }, {});
 
   return (
     <div className="space-y-6">
@@ -110,6 +150,20 @@ export default async function AdminLeadsPage() {
           </>
         }
       />
+
+      {(() => {
+        const missing = ["RESEND_API_KEY", "LEADS_FROM_EMAIL", "LEADS_BCC_EMAIL", "LEADS_FALLBACK_EMAIL"].filter(
+          (key) => !process.env[key]
+        );
+        return missing.length ? (
+          <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+            <AlertTitle>Delivery configuration incomplete</AlertTitle>
+            <AlertDescription>
+              Missing env vars: {missing.join(", ")}. Leads will be marked as skipped until configured.
+            </AlertDescription>
+          </Alert>
+        ) : null;
+      })()}
 
       {process.env.NODE_ENV !== "production" ? (
         <Card className="border-border/70 bg-muted/40">
@@ -151,7 +205,7 @@ export default async function AdminLeadsPage() {
           <CardTitle>Latest requests</CardTitle>
         </CardHeader>
         <CardContent>
-          <LeadsTable leads={leads} />
+          <LeadsTable leads={leads} providerOptionsByMetro={providerOptionsByMetro} />
         </CardContent>
       </Card>
     </div>

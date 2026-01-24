@@ -21,7 +21,9 @@ import {
   markLeadContactedAction,
   markLeadSentAction,
   markLeadViewedAction,
+  reassignLeadAction,
   resendLeadAction,
+  returnLeadToPoolAction,
   setLeadFollowUpAction,
   setLeadResolvedAction,
 } from "./actions";
@@ -29,6 +31,8 @@ import {
 type LeadRowUI = {
   id: string;
   created_at: string;
+  provider_id: string | null;
+  metro_id: string | null;
   status: string;
   viewed_at: string | null;
   last_contacted_at: string | null;
@@ -69,19 +73,22 @@ const deliveryLabels: Record<string, string> = {
   pending: "Pending",
   delivered: "Delivered",
   failed: "Failed",
+  skipped: "Skipped",
 };
 
 const deliveryVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   pending: "outline",
   delivered: "secondary",
   failed: "destructive",
+  skipped: "outline",
 };
 
 type LeadsTableProps = {
   leads: LeadRowUI[];
+  providerOptionsByMetro?: Record<string, { id: string; business_name: string | null }[]>;
 };
 
-export default function LeadsTable({ leads }: LeadsTableProps) {
+export default function LeadsTable({ leads, providerOptionsByMetro }: LeadsTableProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<string[]>([]);
@@ -93,6 +100,7 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
   const [nextActionDrafts, setNextActionDrafts] = useState<Record<string, string>>({});
   const [resolveSelections, setResolveSelections] = useState<Record<string, string>>({});
   const [escalationSelections, setEscalationSelections] = useState<Record<string, string>>({});
+  const [reassignSelections, setReassignSelections] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
   const [localLeads, setLocalLeads] = useState(leads);
 
@@ -145,7 +153,17 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
       setNotice(result);
       if (result.ok) {
         setLocalLeads((prev) =>
-          prev.map((lead) => (lead.id === leadId ? { ...lead, status: "sent" } : lead))
+          prev.map((lead) =>
+            lead.id === leadId
+              ? {
+                  ...lead,
+                  status: "sent",
+                  delivery_status: "delivered",
+                  delivered_at: new Date().toISOString(),
+                  delivery_error: null,
+                }
+              : lead
+          )
         );
       }
     });
@@ -174,6 +192,57 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
         );
       }
       setResendingId(null);
+    });
+  };
+
+  const handleReturnToPool = (leadId: string) => {
+    setNotice(null);
+    startTransition(async () => {
+      const result = await returnLeadToPoolAction(leadId);
+      setNotice(result);
+      if (result.ok) {
+        setLocalLeads((prev) =>
+          prev.map((lead) =>
+            lead.id === leadId
+              ? {
+                  ...lead,
+                  provider_id: null,
+                  provider: null,
+                  delivery_status: "pending",
+                  delivery_error: "Returned to pool by admin.",
+                }
+              : lead
+          )
+        );
+      }
+    });
+  };
+
+  const handleReassign = (leadId: string, providerId: string, metroId?: string | null) => {
+    if (!providerId) return;
+    setNotice(null);
+    startTransition(async () => {
+      const result = await reassignLeadAction(leadId, providerId);
+      setNotice(result);
+      if (result.ok) {
+        const providerList = metroId ? providerOptionsByMetro?.[metroId] ?? [] : [];
+        const providerName =
+          providerList.find((provider) => provider.id === providerId)?.business_name ??
+          "Assigned provider";
+        setLocalLeads((prev) =>
+          prev.map((lead) =>
+            lead.id === leadId
+              ? {
+                  ...lead,
+                  provider_id: providerId,
+                  provider: { business_name: providerName, slug: lead.provider?.slug ?? "" },
+                  delivery_status: "pending",
+                  delivery_error: null,
+                }
+              : lead
+          )
+        );
+      }
     });
   };
 
@@ -426,7 +495,14 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                       )}
                     </TableCell>
                     <TableCell>{metroLabel}</TableCell>
-                    <TableCell>{lead.name}</TableCell>
+                    <TableCell>
+                      <Link
+                        className="text-primary underline-offset-4 hover:underline"
+                        href={`/admin/leads/${lead.id}`}
+                      >
+                        {lead.name}
+                      </Link>
+                    </TableCell>
                     <TableCell>{lead.email}</TableCell>
                     <TableCell>{lead.phone ?? "—"}</TableCell>
                     <TableCell>
@@ -444,7 +520,10 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={deliveryVariants[lead.delivery_status] ?? "outline"}>
+                      <Badge
+                        variant={deliveryVariants[lead.delivery_status] ?? "outline"}
+                        title={lead.delivery_error ?? undefined}
+                      >
                         {deliveryLabels[lead.delivery_status] ?? lead.delivery_status}
                       </Badge>
                     </TableCell>
@@ -597,6 +676,52 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                                   disabled={isPending || !escalationSelections[lead.id]}
                                 >
                                   Escalate
+                                </Button>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <select
+                                  className="h-9 min-w-[200px] rounded-md border border-input bg-background px-3 text-sm"
+                                  value={reassignSelections[lead.id] ?? ""}
+                                  onChange={(event) =>
+                                    setReassignSelections((prev) => ({
+                                      ...prev,
+                                      [lead.id]: event.target.value,
+                                    }))
+                                  }
+                                >
+                                  <option value="">Reassign...</option>
+                                  {(lead.metro_id && providerOptionsByMetro?.[lead.metro_id]
+                                    ? providerOptionsByMetro[lead.metro_id]
+                                    : []
+                                  ).map((provider) => (
+                                    <option key={provider.id} value={provider.id}>
+                                      {provider.business_name ?? "Unnamed provider"}
+                                    </option>
+                                  ))}
+                                </select>
+                                <Button
+                                  size="sm"
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleReassign(
+                                      lead.id,
+                                      reassignSelections[lead.id] ?? "",
+                                      lead.metro_id
+                                    )
+                                  }
+                                  disabled={isPending || !reassignSelections[lead.id]}
+                                >
+                                  Assign
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => handleReturnToPool(lead.id)}
+                                  disabled={isPending}
+                                >
+                                  Return to pool
                                 </Button>
                               </div>
                             </div>

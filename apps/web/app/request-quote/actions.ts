@@ -1,20 +1,25 @@
 "use server";
 
 import { headers } from "next/headers";
+import { createHash } from "crypto";
+import { assignMetroPoolLead } from "../../lib/leads/assignMetroPoolLead";
 import { deliverLead } from "../../lib/leads/deliverLead";
+import { validateEmail, validatePhone } from "../../lib/leads/leadValidation";
+import { recordLeadEvent } from "../../lib/leads/recordLeadEvent";
 import { sendRequesterConfirmation } from "../../lib/leads/sendRequesterConfirmation";
 import { getProviderState } from "../../lib/providers/providerState";
 import { createServerSupabase } from "../../lib/supabase/server";
 
 type QuoteRequestState = {
   ok: boolean;
-  message: string;
+  message?: string;
   fieldErrors?: Record<string, string>;
   formError?: string;
 };
 
 const PHONE_REQUIRED_MESSAGE =
   "Phone helps us connect you with the fastest available provider. We won’t spam you.";
+const MAX_ATTEMPTS_PER_DAY = 10;
 
 export async function submitQuoteRequestAction(
   _prevState: QuoteRequestState,
@@ -59,12 +64,19 @@ export async function submitQuoteRequestAction(
   });
 
   if (typeof honeypot === "string" && honeypot.trim().length > 0) {
-    return { ok: false, message: "", formError: "Unable to submit your request. Please try again." };
+    return { ok: false, formError: "Unable to submit your request. Please try again." };
   }
 
-  const phoneDigits = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
-  if (phoneDigits.length > 0 && phoneDigits.length < 10) {
-    fieldErrors.phone = "Please enter a valid 10-digit phone number.";
+  const phoneValueRaw = typeof phone === "string" ? phone : "";
+  const phoneError = validatePhone(phoneValueRaw, PHONE_REQUIRED_MESSAGE);
+  if (phoneError) {
+    fieldErrors.phone = phoneError;
+  }
+
+  const emailValueRaw = typeof email === "string" ? email : "";
+  const emailError = validateEmail(emailValueRaw);
+  if (emailError) {
+    fieldErrors.email = emailError;
   }
 
   if (typeof postalCode === "string" && postalCode.trim().length > 0) {
@@ -75,18 +87,39 @@ export async function submitQuoteRequestAction(
   }
 
   if (Object.keys(fieldErrors).length > 0) {
-    if (phoneDigits.length > 0 && phoneDigits.length < 10) {
-      fieldErrors.phone = "Please enter a valid 10-digit phone number.";
-    } else if (fieldErrors.phone) {
-      fieldErrors.phone = PHONE_REQUIRED_MESSAGE;
-    }
-    return { ok: false, message: "", fieldErrors };
+    return { ok: false, fieldErrors };
   }
 
   const supabase = await createServerSupabase();
   const headerList = await headers();
   const referer = headerList.get("referer") ?? "";
   const resolvedSourceUrl = typeof sourceUrl === "string" ? sourceUrl : referer;
+
+  const forwardedFor = headerList.get("x-forwarded-for") ?? "";
+  const ipAddress =
+    forwardedFor.split(",")[0]?.trim() ||
+    headerList.get("x-real-ip") ||
+    "unknown";
+  const ipHash = createHash("sha256").update(ipAddress).digest("hex");
+  const attemptDate = new Date().toISOString().slice(0, 10);
+  const { data: attemptCount, error: attemptError } = await supabase.rpc(
+    "record_lead_submit_attempt",
+    {
+      p_ip_hash: ipHash,
+      p_attempt_date: attemptDate,
+    }
+  );
+
+  if (attemptError) {
+    return { ok: false, formError: "Unable to submit your request. Please try again." };
+  }
+
+  if (typeof attemptCount === "number" && attemptCount > MAX_ATTEMPTS_PER_DAY) {
+    return {
+      ok: false,
+      formError: "We’ve received too many requests from this device today. Please try again later.",
+    };
+  }
 
   const [{ data: metroRow }, { data: categoryRow }] = await Promise.all([
     supabase
@@ -101,22 +134,21 @@ export async function submitQuoteRequestAction(
   if (!metroRow) {
     return {
       ok: false,
-      message: "",
       fieldErrors: {
         metroId: "Please choose your metro so we can connect you to the right provider.",
       },
     };
   }
   if (!categoryRow) {
-    return { ok: false, message: "", formError: "Unable to submit your request. Please try again." };
+    return { ok: false, formError: "Unable to submit your request. Please try again." };
   }
 
   const resolvedProviderId = typeof providerId === "string" ? providerId : "";
   const firstNameValue = typeof firstName === "string" ? firstName.trim() : "";
   const lastNameValue = typeof lastName === "string" ? lastName.trim() : "";
   const businessNameValue = typeof businessName === "string" ? businessName.trim() : "";
-  const emailValue = typeof email === "string" ? email.trim() : "";
-  const phoneValue = typeof phone === "string" ? phone.trim() : "";
+  const emailValue = emailValueRaw.trim();
+  const phoneValue = phoneValueRaw.trim();
   const addressLine1Value = typeof addressLine1 === "string" ? addressLine1.trim() : "";
   const addressLine2Value = typeof addressLine2 === "string" ? addressLine2.trim() : "";
   const cityValue = typeof city === "string" ? city.trim() : "";
@@ -137,12 +169,11 @@ export async function submitQuoteRequestAction(
 
   if (resolvedProviderId) {
     if (!providerRow || !providerRow.is_published || providerRow.status !== "active") {
-      return { ok: false, message: "", formError: "Unable to find that provider." };
+      return { ok: false, formError: "Unable to find that provider." };
     }
     if (providerRow.metro_id !== metroId) {
       return {
         ok: false,
-        message: "",
         formError: "Selected metro does not match the provider.",
       };
     }
@@ -187,12 +218,33 @@ export async function submitQuoteRequestAction(
     .maybeSingle();
 
   if (leadError) {
-    return { ok: false, message: "", formError: leadError.message };
+    return { ok: false, formError: leadError.message };
   }
 
   const leadId = leadRow?.id;
   if (!leadId) {
-    return { ok: false, message: "", formError: "Unable to submit your request. Please try again." };
+    return { ok: false, formError: "Unable to submit your request. Please try again." };
+  }
+
+  await recordLeadEvent({
+    leadId,
+    actorType: "public",
+    eventType: "lead_created",
+    data: {
+      metro_id: metroId,
+      provider_id: resolvedProviderId || null,
+      category_id: categoryId,
+      source_url: resolvedSourceUrl,
+    },
+  });
+
+  if (resolvedProviderId) {
+    await recordLeadEvent({
+      leadId,
+      actorType: "system",
+      eventType: "assigned_to_provider",
+      data: { provider_id: resolvedProviderId, metro_id: metroId },
+    });
   }
 
   await sendRequesterConfirmation({
@@ -204,6 +256,7 @@ export async function submitQuoteRequestAction(
   });
 
   if (!resolvedProviderId || !providerRow) {
+    await assignMetroPoolLead(leadId, String(metroId), { actorType: "system" });
     return { ok: true, message: "Request received. We'll be in touch soon." };
   }
 
@@ -219,11 +272,17 @@ export async function submitQuoteRequestAction(
       .schema("public")
       .from("leads")
       .update({
-        delivery_status: "pending",
+        delivery_status: "skipped",
         delivered_at: null,
         delivery_error: reason,
       })
       .eq("id", leadId);
+    await recordLeadEvent({
+      leadId,
+      actorType: "system",
+      eventType: "delivery_skipped",
+      data: { provider_id: resolvedProviderId, reason },
+    });
   }
 
   return { ok: true, message: "Request received. We'll be in touch soon." };

@@ -70,16 +70,14 @@ export default function Header({ isAuthenticated, isAdmin, isProvider, userEmail
             </Link>
           </nav>
         </div>
-        <div className="flex w-full min-w-0 flex-1 items-center gap-3 md:justify-end">
-          <div className="flex-1 min-w-0">
-            <MetroSearch
-              className="w-full min-w-0 max-w-md"
-              inputClassName="h-9"
-              buttonSize="sm"
-              buttonVariant="outline"
-              showStateMatches={false}
-            />
-          </div>
+        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center md:justify-end">
+          <MetroSearch
+            className="w-full md:w-[320px]"
+            inputClassName="h-9"
+            buttonSize="sm"
+            buttonVariant="outline"
+            showStateMatches={false}
+          />
 
           {isAuthenticated ? (
             <div className="relative" ref={menuRef}>

@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "../../../../../components/ui/badge";
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { Input } from "../../../../../components/ui/input";
 import { ArrowRight, Globe, MapPin, Phone, Search } from "lucide-react";
+import { getPublicStorageUrl } from "../../../../../lib/supabase/storageUrl";
 
 type ProviderRow = {
   id: string;
@@ -16,6 +18,7 @@ type ProviderRow = {
   state: string;
   phone: string | null;
   website_url: string | null;
+  logo_path?: string | null;
 };
 
 type ProviderResultsProps = {
@@ -66,11 +69,35 @@ export default function ProviderResults({ providers, state, metro }: ProviderRes
         </Card>
       ) : (
         <section className="grid gap-4 md:grid-cols-2">
-          {filteredProviders.map((provider) => (
+          {filteredProviders.map((provider) => {
+            const logoUrl = getPublicStorageUrl("provider-logos", provider.logo_path ?? null);
+            const initials = provider.business_name
+              .split(" ")
+              .map((word) => word[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
+            return (
             <Card key={provider.id} className="flex h-full flex-col transition hover:border-primary/40">
               <CardHeader>
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-lg">{provider.business_name}</CardTitle>
+                  <div className="flex items-center gap-3">
+                    {logoUrl ? (
+                      <Image
+                        src={logoUrl}
+                        alt={`${provider.business_name} logo`}
+                        width={48}
+                        height={48}
+                        className="h-12 w-12 rounded-full border border-border object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-border text-xs font-semibold text-muted-foreground">
+                        {initials}
+                      </div>
+                    )}
+                    <CardTitle className="text-lg">{provider.business_name}</CardTitle>
+                  </div>
                   {provider.website_url ? (
                     <Badge variant="outline" className="flex items-center gap-1">
                       <Globe className="h-3.5 w-3.5" />
@@ -101,7 +128,8 @@ export default function ProviderResults({ providers, state, metro }: ProviderRes
                 </Button>
               </CardContent>
             </Card>
-          ))}
+          );
+          })}
         </section>
       )}
     </div>

@@ -16,7 +16,9 @@ type LeadRowUI = {
   resolution_status: string | null;
   escalated_at: string | null;
   delivery_status: string;
+  delivery_error?: string | null;
   name: string;
+  email: string | null;
   phone: string | null;
   metro: { name: string; state: string } | null;
 };
@@ -60,7 +62,7 @@ export default async function DashboardLeadsBoardPage() {
     .schema("public")
     .from("leads")
     .select(
-      "id, created_at, viewed_at, last_contacted_at, resolved_at, escalated_at, resolution_status, delivery_status, name, phone, metros(name,state)"
+      "id, created_at, viewed_at, last_contacted_at, resolved_at, escalated_at, resolution_status, delivery_status, delivery_error, name, email, phone, metros(name,state)"
     )
     .eq("provider_id", providerId)
     .order("created_at", { ascending: false });
@@ -74,7 +76,9 @@ export default async function DashboardLeadsBoardPage() {
     escalated_at: lead.escalated_at ?? null,
     resolution_status: lead.resolution_status ?? null,
     delivery_status: lead.delivery_status ?? "pending",
+    delivery_error: lead.delivery_error ?? null,
     name: lead.name,
+    email: lead.email ?? null,
     phone: lead.phone ?? null,
     metro: lead.metros?.[0] ?? null,
   }));

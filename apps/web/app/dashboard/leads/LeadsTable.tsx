@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
@@ -42,6 +43,13 @@ type LeadRowUI = {
 
 type LeadsTableProps = {
   leads: LeadRowUI[];
+};
+
+const deliveryLabels: Record<string, string> = {
+  pending: "Pending",
+  delivered: "Delivered",
+  failed: "Failed",
+  skipped: "Skipped",
 };
 
 export default function LeadsTable({ leads }: LeadsTableProps) {
@@ -196,12 +204,19 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                 <TableCell>
                   <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
                 </TableCell>
-                <TableCell>{lead.name}</TableCell>
+                <TableCell>
+                  <Link
+                    className="text-primary underline-offset-4 hover:underline"
+                    href={`/dashboard/leads/${lead.id}`}
+                  >
+                    {lead.name}
+                  </Link>
+                </TableCell>
                 <TableCell>{lead.email}</TableCell>
                 <TableCell>{lead.phone ?? "—"}</TableCell>
                 <TableCell>
                   <Badge variant={lead.delivery_status === "delivered" ? "secondary" : "outline"}>
-                    {lead.delivery_status}
+                    {deliveryLabels[lead.delivery_status] ?? lead.delivery_status}
                   </Badge>
                   {lead.delivery_error ? (
                     <div className="mt-1 text-xs text-muted-foreground">

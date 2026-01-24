@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, ShieldCheck } from "lucide-react";
 import { Badge } from "../../../../../components/ui/badge";
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { Input } from "../../../../../components/ui/input";
+import { getPublicStorageUrl } from "../../../../../lib/supabase/storageUrl";
 
 type ProviderRow = {
   id: string;
@@ -18,6 +20,7 @@ type ProviderRow = {
   phone: string | null;
   website_url: string | null;
   description: string | null;
+  logo_path: string | null;
   provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
 };
 
@@ -101,15 +104,38 @@ export default function ProvidersGrid({
                 ? `${provider.city}, ${provider.state}`
                 : "Location not set";
             const detailHref = `/grease-trap-cleaning/${state}/${metro}/${provider.slug}`;
+            const logoUrl = getPublicStorageUrl("provider-logos", provider.logo_path);
+            const initials = provider.business_name
+              .split(" ")
+              .map((word) => word[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
             return (
               <Card key={provider.id} className="flex h-full flex-col">
                 <CardHeader className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg">
-                      <Link href={detailHref} className="hover:underline">
-                        {provider.business_name}
-                      </Link>
-                    </CardTitle>
+                    <div className="flex items-center gap-3">
+                      {logoUrl ? (
+                        <Image
+                          src={logoUrl}
+                          alt={`${provider.business_name} logo`}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded-full border border-border object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-border text-xs font-semibold text-muted-foreground">
+                          {initials}
+                        </div>
+                      )}
+                      <CardTitle className="text-lg">
+                        <Link href={detailHref} className="hover:underline">
+                          {provider.business_name}
+                        </Link>
+                      </CardTitle>
+                    </div>
                     {providerState === "VERIFIED" ? (
                       <Badge variant="outline" className="flex items-center gap-1">
                         <ShieldCheck className="h-3.5 w-3.5" />
