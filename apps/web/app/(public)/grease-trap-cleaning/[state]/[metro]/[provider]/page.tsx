@@ -182,9 +182,12 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
 
   const categoryLabel = provider.categories?.name ?? "Grease Trap Cleaning";
   const providerState = getProviderState(provider);
+  const canShowMedia = providerState === "VERIFIED" && provider.is_published;
   const locationLabel =
     provider.city && provider.state ? `${provider.city}, ${provider.state}` : "Location not set";
-  const logoUrl = provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path ?? null);
+  const logoUrl = canShowMedia
+    ? provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path ?? null)
+    : null;
   const initials = provider.business_name
     .split(" ")
     .map((word) => word[0])
@@ -292,7 +295,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
         </div>
       </header>
 
-      {media?.length ? (
+      {canShowMedia && media?.length ? (
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {media.map((photo) => (
             <Card key={photo.id} className="overflow-hidden">

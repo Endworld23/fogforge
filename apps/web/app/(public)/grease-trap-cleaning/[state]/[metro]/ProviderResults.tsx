@@ -20,6 +20,7 @@ type ProviderRow = {
   website_url: string | null;
   logo_url?: string | null;
   logo_path?: string | null;
+  provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
 };
 
 type ProviderResultsProps = {
@@ -71,7 +72,9 @@ export default function ProviderResults({ providers, state, metro }: ProviderRes
       ) : (
         <section className="grid gap-4 md:grid-cols-2">
           {filteredProviders.map((provider) => {
-            const logoUrl = provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path ?? null);
+            const logoUrl = provider.provider_state === "VERIFIED"
+              ? provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path ?? null)
+              : null;
             const initials = provider.business_name
               .split(" ")
               .map((word) => word[0])

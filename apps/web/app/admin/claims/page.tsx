@@ -16,12 +16,24 @@ type ClaimRow = {
   message: string | null;
   created_at: string;
   reviewed_at: string | null;
+  claimant_first_name: string | null;
+  claimant_last_name: string | null;
+  claimant_phone: string | null;
+  claimant_role: string | null;
+  claimant_role_other: string | null;
+  claimant_address_line1: string | null;
+  claimant_address_line2: string | null;
+  claimant_city: string | null;
+  claimant_state: string | null;
+  claimant_zip: string | null;
   provider: {
     business_name: string;
     city: string | null;
     state: string | null;
     verified_at: string | null;
+    metros: { name: string; state: string }[] | null;
   } | null;
+  documents: { id: string; doc_type: string; file_url: string }[];
 };
 
 export default async function AdminClaimsPage() {
@@ -35,7 +47,7 @@ export default async function AdminClaimsPage() {
     .schema("public")
     .from("provider_claim_requests")
     .select(
-      "id, provider_id, requester_user_id, requester_email, status, message, created_at, reviewed_at, provider:providers(business_name, city, state, verified_at)"
+      "id, provider_id, requester_user_id, requester_email, status, message, created_at, reviewed_at, claimant_first_name, claimant_last_name, claimant_phone, claimant_role, claimant_role_other, claimant_address_line1, claimant_address_line2, claimant_city, claimant_state, claimant_zip, provider:providers(business_name, city, state, verified_at, metros(name,state)), documents:provider_claim_request_documents(id, doc_type, file_url)"
     )
     .order("created_at", { ascending: false });
 
@@ -48,7 +60,18 @@ export default async function AdminClaimsPage() {
     message: claim.message ?? null,
     created_at: claim.created_at,
     reviewed_at: claim.reviewed_at ?? null,
+    claimant_first_name: claim.claimant_first_name ?? null,
+    claimant_last_name: claim.claimant_last_name ?? null,
+    claimant_phone: claim.claimant_phone ?? null,
+    claimant_role: claim.claimant_role ?? null,
+    claimant_role_other: claim.claimant_role_other ?? null,
+    claimant_address_line1: claim.claimant_address_line1 ?? null,
+    claimant_address_line2: claim.claimant_address_line2 ?? null,
+    claimant_city: claim.claimant_city ?? null,
+    claimant_state: claim.claimant_state ?? null,
+    claimant_zip: claim.claimant_zip ?? null,
     provider: claim.provider?.[0] ?? null,
+    documents: claim.documents ?? [],
   }));
 
   return (
@@ -58,7 +81,7 @@ export default async function AdminClaimsPage() {
         description="Review and approve provider claim requests."
       />
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="secondary">{claims?.length ?? 0} requests</Badge>
+        <Badge variant="secondary">{rows.length} requests</Badge>
       </div>
       <ClaimsTable claims={rows} />
     </div>

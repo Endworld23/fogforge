@@ -100,12 +100,15 @@ export default function ProvidersGrid({
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {providers.map((provider) => {
             const providerState = provider.provider_state;
+            const showLogo = providerState === "VERIFIED";
             const locationLabel =
               provider.city && provider.state
                 ? `${provider.city}, ${provider.state}`
                 : "Location not set";
             const detailHref = `/grease-trap-cleaning/${state}/${metro}/${provider.slug}`;
-            const logoUrl = provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path);
+            const logoUrl = showLogo
+              ? provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path)
+              : null;
             const initials = provider.business_name
               .split(" ")
               .map((word) => word[0])

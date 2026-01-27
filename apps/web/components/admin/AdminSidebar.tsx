@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, ClipboardCheck, Inbox, LayoutDashboard, UploadCloud, Users } from "lucide-react";
+import { Activity, ClipboardCheck, FileCheck, Inbox, LayoutDashboard, UploadCloud, Users } from "lucide-react";
 
 const navGroups = [
   {
@@ -12,6 +12,7 @@ const navGroups = [
       { label: "Providers", href: "/admin/providers", icon: Users },
       { label: "Leads", href: "/admin/leads", icon: Inbox },
       { label: "Onboarding", href: "/admin/onboarding", icon: ClipboardCheck },
+      { label: "Claims", href: "/admin/claims", icon: FileCheck },
     ],
   },
   {

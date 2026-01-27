@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { createBrowserClient } from "../../../lib/supabase/browser";
@@ -21,6 +22,8 @@ type ProviderMediaManagerProps = {
   initialLogoPath: string | null;
   initialMedia: ProviderMedia[];
   canEditMedia: boolean;
+  providerState: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
+  isPublished: boolean;
 };
 
 const STORAGE_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -38,6 +41,8 @@ export default function ProviderMediaManager({
   initialLogoPath,
   initialMedia,
   canEditMedia,
+  providerState,
+  isPublished,
 }: ProviderMediaManagerProps) {
   const [logoUrl, setLogoUrl] = useState<string | null>(initialLogoUrl);
   const [logoPath, setLogoPath] = useState<string | null>(initialLogoPath);
@@ -47,9 +52,10 @@ export default function ProviderMediaManager({
 
   const logoSrc = logoUrl ?? getPublicStorageUrl("provider-logos", logoPath ?? undefined);
   const canUploadMore = media.length < MAX_MEDIA;
+  const uploadsEnabled = canEditMedia;
 
   const uploadLogo = (file: File) => {
-    if (!canEditMedia) return;
+    if (!uploadsEnabled) return;
     startTransition(async () => {
       setNotice(null);
       const supabase = createBrowserClient();
@@ -84,7 +90,7 @@ export default function ProviderMediaManager({
   };
 
   const removeLogo = () => {
-    if (!canEditMedia) return;
+    if (!uploadsEnabled) return;
     if (!logoPath && !logoUrl) return;
     startTransition(async () => {
       setNotice(null);
@@ -112,7 +118,7 @@ export default function ProviderMediaManager({
   };
 
   const uploadMedia = (files: FileList | null) => {
-    if (!files?.length || !canEditMedia) return;
+    if (!files?.length || !uploadsEnabled) return;
     if (!canUploadMore) {
       setNotice(`You can upload up to ${MAX_MEDIA} photos.`);
       return;
@@ -158,7 +164,7 @@ export default function ProviderMediaManager({
   };
 
   const removeMedia = (item: ProviderMedia) => {
-    if (!canEditMedia) return;
+    if (!uploadsEnabled) return;
     startTransition(async () => {
       setNotice(null);
       const supabase = createBrowserClient();
@@ -177,11 +183,25 @@ export default function ProviderMediaManager({
 
   return (
     <div className="space-y-4">
-      {!canEditMedia ? (
+      {providerState === "UNCLAIMED" ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Media uploads are available once your listing is published and verified.
+          You need to claim this business before uploading media.
+          <Link className="ml-2 font-semibold underline-offset-4 hover:underline" href="/get-started?mode=claim">
+            Claim a business
+          </Link>
         </div>
       ) : null}
+      {providerState === "CLAIMED_UNVERIFIED" ? (
+        <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+          Images will go public after verification.
+        </div>
+      ) : null}
+      {providerState === "VERIFIED" && !isPublished ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+          Publish your listing to make your logo and gallery visible.
+        </div>
+      ) : null}
+
       <div>
         <div className="text-sm font-semibold text-foreground">Logo</div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -202,7 +222,7 @@ export default function ProviderMediaManager({
           <Input
             type="file"
             accept="image/*"
-            disabled={isPending || !canEditMedia}
+            disabled={isPending || !uploadsEnabled}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) {
@@ -211,13 +231,13 @@ export default function ProviderMediaManager({
               event.currentTarget.value = "";
             }}
           />
-          {(logoPath || logoUrl) ? (
+          {logoPath || logoUrl ? (
             <Button
               size="sm"
               variant="outline"
               type="button"
               onClick={removeLogo}
-              disabled={isPending || !canEditMedia}
+              disabled={isPending || !uploadsEnabled}
             >
               Remove logo
             </Button>
@@ -232,7 +252,7 @@ export default function ProviderMediaManager({
             type="file"
             accept="image/*"
             multiple
-            disabled={isPending || !canEditMedia || !canUploadMore}
+            disabled={isPending || !uploadsEnabled || !canUploadMore}
             onChange={(event) => {
               uploadMedia(event.target.files);
               event.currentTarget.value = "";
@@ -260,7 +280,7 @@ export default function ProviderMediaManager({
                   variant="outline"
                   type="button"
                   onClick={() => removeMedia(item)}
-                  disabled={isPending || !canEditMedia}
+                  disabled={isPending || !uploadsEnabled}
                 >
                   Remove
                 </Button>

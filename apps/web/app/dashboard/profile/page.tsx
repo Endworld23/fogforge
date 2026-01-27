@@ -63,7 +63,7 @@ export default async function DashboardProfilePage() {
   }
 
   const providerState = getProviderState(provider);
-  const canEditMedia = providerState === "VERIFIED" && provider.is_published;
+  const canEditMedia = providerState !== "UNCLAIMED";
 
   return (
     <div className="space-y-6">
@@ -93,6 +93,8 @@ export default async function DashboardProfilePage() {
               sort_order: item.sort_order ?? 0,
             }))}
             canEditMedia={canEditMedia}
+            providerState={providerState}
+            isPublished={provider.is_published}
           />
         </CardContent>
       </Card>
