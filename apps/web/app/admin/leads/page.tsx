@@ -60,6 +60,13 @@ export default async function AdminLeadsPage() {
     redirect("/login");
   }
 
+  const resendApiKeySet = Boolean(process.env.RESEND_API_KEY?.trim());
+  const leadsFromSet = Boolean(process.env.LEADS_FROM_EMAIL?.trim());
+  const leadsBccSet = Boolean(process.env.LEADS_BCC_EMAIL?.trim());
+  const leadsFallbackSet = Boolean(process.env.LEADS_FALLBACK_EMAIL?.trim());
+  const requesterConfirmationEnabled = resendApiKeySet && leadsFromSet;
+  const providerDeliveryEnabled = resendApiKeySet && leadsFromSet;
+
   const supabase = await createServerSupabaseReadOnly();
   const [{ data, error }, { data: providersData }] = await Promise.all([
     supabase
@@ -173,7 +180,16 @@ export default async function AdminLeadsPage() {
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div>
               <p className="font-medium text-foreground">Required env vars</p>
-              <p>RESEND_API_KEY, LEADS_FROM_EMAIL, LEADS_BCC_EMAIL, LEADS_FALLBACK_EMAIL</p>
+              <ul className="space-y-1">
+                <li>RESEND_API_KEY: {resendApiKeySet ? "set" : "missing"}</li>
+                <li>LEADS_FROM_EMAIL: {leadsFromSet ? "set" : "missing"}</li>
+                <li>LEADS_BCC_EMAIL: {leadsBccSet ? "set" : "missing"}</li>
+                <li>LEADS_FALLBACK_EMAIL: {leadsFallbackSet ? "set" : "missing"}</li>
+              </ul>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Requester confirmation: {requesterConfirmationEnabled ? "enabled" : "disabled"} ·
+                Provider delivery: {providerDeliveryEnabled ? "enabled" : "disabled"}
+              </div>
             </div>
             <div>
               <p className="font-medium text-foreground">Migrations</p>

@@ -10,6 +10,7 @@
     "build:clean": "npm run clean:next && next build --webpack",
     "start": "next start",
     "lint": "eslint -c eslint.config.mjs . --max-warnings=0",
+    "smoke": "npm run lint && npm run build && node ./scripts/smoke-env.mjs",
     "seed:csv": "tsx scripts/generate-seed-csvs.ts"
   },
   "dependencies": {

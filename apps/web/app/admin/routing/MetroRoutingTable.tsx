@@ -15,6 +15,8 @@ type MetroRoutingRow = {
   name: string;
   state: string;
   providers: ProviderOption[];
+  provider_count: number;
+  pool_count: number;
   last_provider_id: string | null;
   last_assigned_at: string | null;
 };
@@ -58,6 +60,9 @@ export default function MetroRoutingTable({ metros }: MetroRoutingTableProps) {
                 <div className="text-xs text-muted-foreground">
                   Last assigned:{" "}
                   {metro.last_assigned_at ? new Date(metro.last_assigned_at).toLocaleString() : "—"}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Verified providers: {metro.provider_count} · Pool queue: {metro.pool_count}
                 </div>
               </div>
               <Button

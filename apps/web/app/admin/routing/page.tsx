@@ -27,20 +27,22 @@ export default async function AdminRoutingPage() {
   }
 
   const supabase = await createServerSupabaseReadOnly();
-  const [{ data: metros }, { data: providers }, { data: rotations }] = await Promise.all([
-    supabase.schema("public").from("metros").select("id, name, state").order("name"),
-    supabase
-      .schema("public")
-      .from("providers")
-      .select(
-        "id, business_name, metro_id, is_published, status, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
-      )
-      .order("business_name"),
-    supabase
-      .schema("public")
-      .from("metro_lead_rotation")
-      .select("metro_id, last_provider_id, last_assigned_at"),
-  ]);
+  const [{ data: metros }, { data: providers }, { data: rotations }, { data: poolLeads }] =
+    await Promise.all([
+      supabase.schema("public").from("metros").select("id, name, state").order("name"),
+      supabase
+        .schema("public")
+        .from("providers")
+        .select(
+          "id, business_name, metro_id, is_published, status, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
+        )
+        .order("business_name"),
+      supabase
+        .schema("public")
+        .from("metro_lead_rotation")
+        .select("metro_id, last_provider_id, last_assigned_at"),
+      supabase.schema("public").from("leads").select("metro_id").is("provider_id", null),
+    ]);
 
   const providerRows = (providers ?? []) as ProviderRow[];
   const eligibleProviders = providerRows.filter(
@@ -57,6 +59,12 @@ export default async function AdminRoutingPage() {
       acc[row.metro_id] = [];
     }
     acc[row.metro_id].push(row);
+    return acc;
+  }, {});
+
+  const poolCounts = (poolLeads ?? []).reduce<Record<string, number>>((acc, row) => {
+    if (!row.metro_id) return acc;
+    acc[row.metro_id] = (acc[row.metro_id] ?? 0) + 1;
     return acc;
   }, {});
 
@@ -79,6 +87,8 @@ export default async function AdminRoutingPage() {
         id: provider.id,
         business_name: provider.business_name ?? null,
       })) ?? [],
+    provider_count: providersByMetro[metro.id]?.length ?? 0,
+    pool_count: poolCounts[metro.id] ?? 0,
     last_provider_id: rotationByMetro[metro.id]?.last_provider_id ?? null,
     last_assigned_at: rotationByMetro[metro.id]?.last_assigned_at ?? null,
   }));
@@ -87,7 +97,7 @@ export default async function AdminRoutingPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Metro Routing"
-        description="Review provider order and reset rotation pointers."
+        description="Review provider order, pool queue, and reset rotation pointers."
       />
       <MetroRoutingTable metros={rows} />
     </div>

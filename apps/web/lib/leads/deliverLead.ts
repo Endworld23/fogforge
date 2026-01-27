@@ -143,7 +143,8 @@ export async function deliverLead(leadId: string): Promise<DeliverLeadResult> {
   }
 
   if (!resendApiKey || !fromEmail) {
-    const configMessage = "Missing Resend configuration.";
+    const configMessage =
+      "Email delivery is not configured yet (missing RESEND_API_KEY / LEADS_FROM_EMAIL). The lead was saved successfully.";
     await supabase
       .schema("public")
       .from("leads")

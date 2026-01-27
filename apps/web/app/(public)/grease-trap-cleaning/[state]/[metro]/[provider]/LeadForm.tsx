@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../../../../comp
 import { Input } from "../../../../../../components/ui/input";
 import { submitLeadAction } from "./actions";
 import { createBrowserClient } from "../../../../../../lib/supabase/browser";
+import { cn } from "../../../../../../lib/utils";
 
 type LeadFormProps = {
   providerId: string;
@@ -41,6 +42,7 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const fieldErrors = result.fieldErrors ?? {};
+  const errorInputClass = "border-rose-500 ring-1 ring-rose-500 focus-visible:ring-rose-500";
 
   useEffect(() => {
     setSourceUrl(window.location.href);
@@ -159,6 +161,8 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
             name="name"
             autoComplete="name"
             required
+            aria-invalid={Boolean(fieldErrors.name)}
+            className={cn(fieldErrors.name ? errorInputClass : null)}
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
@@ -175,6 +179,8 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
             type="email"
             autoComplete="email"
             required
+            aria-invalid={Boolean(fieldErrors.email)}
+            className={cn(fieldErrors.email ? errorInputClass : null)}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
@@ -192,6 +198,8 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
           name="phone"
           autoComplete="tel"
           required
+          aria-invalid={Boolean(fieldErrors.phone)}
+          className={cn(fieldErrors.phone ? errorInputClass : null)}
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
         />
@@ -209,7 +217,11 @@ export default function LeadForm({ providerId, categoryId, metroId }: LeadFormPr
           id="message"
           name="message"
           rows={4}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className={cn(
+            "w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            fieldErrors.message ? errorInputClass : null
+          )}
+          aria-invalid={Boolean(fieldErrors.message)}
           value={message}
           onChange={(event) => setMessage(event.target.value)}
         />

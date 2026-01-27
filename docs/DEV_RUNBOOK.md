@@ -11,6 +11,13 @@ npm run build
 npm run start
 ```
 
+## Smoke test checklist
+
+- Submit a request-quote (global or metro).
+- Verify the lead appears in `/admin/leads` and `/admin/leads/board`.
+- Sign in as a provider and check `/dashboard/leads` and `/dashboard/leads/board`.
+- If email delivery is enabled, resend a lead and confirm delivery_status updates.
+
 ## Common pitfalls
 
 - `npm ERR! enoent ENOENT: no such file or directory, open 'package.json'`: run commands from `apps/web`.
@@ -23,7 +30,7 @@ chmod -R u+rwX .next 2>/dev/null || true
 rm -rf .next
 ```
 
-## Env vars for Resend lead delivery
+## Env vars for lead delivery + confirmations
 
 Set these in `.env.local` or your environment:
 
@@ -31,3 +38,11 @@ Set these in `.env.local` or your environment:
 - `LEADS_FROM_EMAIL`
 - `LEADS_BCC_EMAIL`
 - `LEADS_FALLBACK_EMAIL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+## Optional helper
+
+```bash
+npm run smoke
+```
