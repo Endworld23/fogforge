@@ -18,6 +18,7 @@ type ProviderRow = {
   state: string;
   phone: string | null;
   website_url: string | null;
+  logo_url?: string | null;
   logo_path?: string | null;
 };
 
@@ -70,7 +71,7 @@ export default function ProviderResults({ providers, state, metro }: ProviderRes
       ) : (
         <section className="grid gap-4 md:grid-cols-2">
           {filteredProviders.map((provider) => {
-            const logoUrl = getPublicStorageUrl("provider-logos", provider.logo_path ?? null);
+            const logoUrl = provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path ?? null);
             const initials = provider.business_name
               .split(" ")
               .map((word) => word[0])

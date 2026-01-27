@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
 import { getUserContext } from "../../../lib/auth/getUserContext";
+import { getProviderState } from "../../../lib/providers/providerState";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
 import ProfileForm from "./ProfileForm";
 import ProviderMediaManager from "./ProviderMediaManager";
@@ -32,20 +33,21 @@ export default async function DashboardProfilePage() {
   }
 
   const supabase = await createServerSupabaseReadOnly();
-  const [{ data: provider }, { data: photos }] = await Promise.all([
+  const [{ data: provider }, { data: media }] = await Promise.all([
     supabase
       .schema("public")
       .from("providers")
       .select(
-        "id, business_name, phone, website_url, email_public, description, street, city, state, postal_code, is_published, logo_path"
+        "id, business_name, phone, website_url, email_public, description, street, city, state, postal_code, is_published, logo_path, logo_url, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
       )
       .eq("id", providerUser.provider_id)
       .maybeSingle(),
     supabase
       .schema("public")
-      .from("provider_photos")
-      .select("id, path")
+      .from("provider_media")
+      .select("id, url, sort_order, created_at")
       .eq("provider_id", providerUser.provider_id)
+      .order("sort_order", { ascending: false })
       .order("created_at", { ascending: false }),
   ]);
 
@@ -59,6 +61,9 @@ export default async function DashboardProfilePage() {
       </Card>
     );
   }
+
+  const providerState = getProviderState(provider);
+  const canEditMedia = providerState === "VERIFIED" && provider.is_published;
 
   return (
     <div className="space-y-6">
@@ -80,8 +85,14 @@ export default async function DashboardProfilePage() {
         <CardContent>
           <ProviderMediaManager
             providerId={provider.id}
+            initialLogoUrl={provider.logo_url ?? null}
             initialLogoPath={provider.logo_path ?? null}
-            initialPhotos={(photos ?? []).map((photo) => ({ id: photo.id, path: photo.path }))}
+            initialMedia={(media ?? []).map((item) => ({
+              id: item.id,
+              url: item.url,
+              sort_order: item.sort_order ?? 0,
+            }))}
+            canEditMedia={canEditMedia}
           />
         </CardContent>
       </Card>

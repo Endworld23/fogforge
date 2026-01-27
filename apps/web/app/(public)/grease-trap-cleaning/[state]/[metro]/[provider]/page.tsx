@@ -40,6 +40,7 @@ type ProviderRow = {
   website_url: string | null;
   description: string | null;
   is_published: boolean;
+  logo_url?: string | null;
   logo_path?: string | null;
   claim_status: string | null;
   verified_at: string | null;
@@ -106,7 +107,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     .schema("public")
     .from("providers")
     .select(
-      "id, slug, business_name, city, state, phone, website_url, description, logo_path, is_published, metro_id, category_id, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
+      "id, slug, business_name, city, state, phone, website_url, description, logo_url, logo_path, is_published, metro_id, category_id, claim_status, verified_at, claimed_by_user_id, is_claimed, user_id"
     )
     .eq("slug", resolvedParams.provider)
     .eq("is_published", true)
@@ -120,7 +121,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
   const [
     { data: metroData, error: metroError },
     { data: categoryData, error: categoryError },
-    { data: photos },
+    { data: media },
   ] = await Promise.all([
       providerData.metro_id
         ? supabase
@@ -140,9 +141,10 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
         : Promise.resolve({ data: null, error: null }),
       supabase
         .schema("public")
-        .from("provider_photos")
-        .select("id, path")
+        .from("provider_media")
+        .select("id, url, sort_order, created_at")
         .eq("provider_id", providerData.id)
+        .order("sort_order", { ascending: false })
         .order("created_at", { ascending: false }),
     ]);
 
@@ -167,6 +169,7 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
     website_url: providerData.website_url ?? null,
     description: providerData.description ?? null,
     is_published: providerData.is_published,
+    logo_url: providerData.logo_url ?? null,
     logo_path: providerData.logo_path ?? null,
     claim_status: providerData.claim_status ?? null,
     verified_at: providerData.verified_at ?? null,
@@ -181,7 +184,13 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
   const providerState = getProviderState(provider);
   const locationLabel =
     provider.city && provider.state ? `${provider.city}, ${provider.state}` : "Location not set";
-  const logoUrl = getPublicStorageUrl("provider-logos", provider.logo_path ?? null);
+  const logoUrl = provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path ?? null);
+  const initials = provider.business_name
+    .split(" ")
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   if (!provider.is_published) {
     notFound();
@@ -223,7 +232,11 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
                 className="h-14 w-14 rounded-full border border-border object-cover"
                 unoptimized
               />
-            ) : null}
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-border text-xs font-semibold text-muted-foreground">
+                {initials}
+              </div>
+            )}
             <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
               {provider.business_name}
             </h1>
@@ -239,6 +252,14 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Verified
               </Badge>
+            ) : null}
+            {providerState === "UNCLAIMED" ? (
+              <Link
+                href={`/claim?provider=${provider.id}`}
+                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Claim this business
+              </Link>
             ) : null}
           </div>
         </div>
@@ -271,26 +292,20 @@ export default async function ProviderDetailPage({ params }: ProviderPageProps) 
         </div>
       </header>
 
-      {photos?.length ? (
+      {media?.length ? (
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {photos.map((photo) => {
-            const photoUrl = getPublicStorageUrl("provider-photos", photo.path);
-            if (!photoUrl) {
-              return null;
-            }
-            return (
-              <Card key={photo.id} className="overflow-hidden">
-                <Image
-                  src={photoUrl}
-                  alt={`${provider.business_name} photo`}
-                  width={640}
-                  height={360}
-                  className="h-48 w-full object-cover"
-                  unoptimized
-                />
-              </Card>
-            );
-          })}
+          {media.map((photo) => (
+            <Card key={photo.id} className="overflow-hidden">
+              <Image
+                src={photo.url}
+                alt={`${provider.business_name} photo`}
+                width={640}
+                height={360}
+                className="h-48 w-full object-cover"
+                unoptimized
+              />
+            </Card>
+          ))}
         </section>
       ) : null}
 

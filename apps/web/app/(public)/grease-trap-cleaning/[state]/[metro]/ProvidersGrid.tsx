@@ -20,6 +20,7 @@ type ProviderRow = {
   phone: string | null;
   website_url: string | null;
   description: string | null;
+  logo_url: string | null;
   logo_path: string | null;
   provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
 };
@@ -104,7 +105,7 @@ export default function ProvidersGrid({
                 ? `${provider.city}, ${provider.state}`
                 : "Location not set";
             const detailHref = `/grease-trap-cleaning/${state}/${metro}/${provider.slug}`;
-            const logoUrl = getPublicStorageUrl("provider-logos", provider.logo_path);
+            const logoUrl = provider.logo_url ?? getPublicStorageUrl("provider-logos", provider.logo_path);
             const initials = provider.business_name
               .split(" ")
               .map((word) => word[0])

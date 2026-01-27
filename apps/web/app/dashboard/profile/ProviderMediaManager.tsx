@@ -7,28 +7,49 @@ import { Input } from "../../../components/ui/input";
 import { createBrowserClient } from "../../../lib/supabase/browser";
 import { getPublicStorageUrl } from "../../../lib/supabase/storageUrl";
 
-type ProviderPhoto = {
+const MAX_MEDIA = 6;
+
+type ProviderMedia = {
   id: string;
-  path: string;
+  url: string;
+  sort_order: number;
 };
 
 type ProviderMediaManagerProps = {
   providerId: string;
+  initialLogoUrl: string | null;
   initialLogoPath: string | null;
-  initialPhotos: ProviderPhoto[];
+  initialMedia: ProviderMedia[];
+  canEditMedia: boolean;
 };
+
+const STORAGE_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+
+function getStoragePathFromPublicUrl(url: string | null, bucket: string) {
+  if (!url || !STORAGE_BASE) return null;
+  const prefix = `${STORAGE_BASE}/storage/v1/object/public/${bucket}/`;
+  if (!url.startsWith(prefix)) return null;
+  return url.slice(prefix.length);
+}
 
 export default function ProviderMediaManager({
   providerId,
+  initialLogoUrl,
   initialLogoPath,
-  initialPhotos,
+  initialMedia,
+  canEditMedia,
 }: ProviderMediaManagerProps) {
+  const [logoUrl, setLogoUrl] = useState<string | null>(initialLogoUrl);
   const [logoPath, setLogoPath] = useState<string | null>(initialLogoPath);
-  const [photos, setPhotos] = useState<ProviderPhoto[]>(initialPhotos);
+  const [media, setMedia] = useState<ProviderMedia[]>(initialMedia);
   const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const logoSrc = logoUrl ?? getPublicStorageUrl("provider-logos", logoPath ?? undefined);
+  const canUploadMore = media.length < MAX_MEDIA;
+
   const uploadLogo = (file: File) => {
+    if (!canEditMedia) return;
     startTransition(async () => {
       setNotice(null);
       const supabase = createBrowserClient();
@@ -40,9 +61,10 @@ export default function ProviderMediaManager({
         setNotice(uploadError.message);
         return;
       }
+      const publicUrl = getPublicStorageUrl("provider-logos", path);
       const { error: updateError } = await supabase
         .from("providers")
-        .update({ logo_path: path })
+        .update({ logo_url: publicUrl, logo_path: path })
         .eq("id", providerId);
       if (updateError) {
         setNotice(updateError.message);
@@ -50,34 +72,58 @@ export default function ProviderMediaManager({
       }
       if (logoPath) {
         await supabase.storage.from("provider-logos").remove([logoPath]);
+      } else if (logoUrl) {
+        const legacyPath = getStoragePathFromPublicUrl(logoUrl, "provider-logos");
+        if (legacyPath) {
+          await supabase.storage.from("provider-logos").remove([legacyPath]);
+        }
       }
       setLogoPath(path);
+      setLogoUrl(publicUrl ?? null);
     });
   };
 
   const removeLogo = () => {
-    if (!logoPath) return;
+    if (!canEditMedia) return;
+    if (!logoPath && !logoUrl) return;
     startTransition(async () => {
       setNotice(null);
       const supabase = createBrowserClient();
-      await supabase.storage.from("provider-logos").remove([logoPath]);
-      const { error } = await supabase.from("providers").update({ logo_path: null }).eq("id", providerId);
+      const paths: string[] = [];
+      if (logoPath) paths.push(logoPath);
+      if (!logoPath && logoUrl) {
+        const legacyPath = getStoragePathFromPublicUrl(logoUrl, "provider-logos");
+        if (legacyPath) paths.push(legacyPath);
+      }
+      if (paths.length) {
+        await supabase.storage.from("provider-logos").remove(paths);
+      }
+      const { error } = await supabase
+        .from("providers")
+        .update({ logo_url: null, logo_path: null })
+        .eq("id", providerId);
       if (error) {
         setNotice(error.message);
         return;
       }
       setLogoPath(null);
+      setLogoUrl(null);
     });
   };
 
-  const uploadPhotos = (files: FileList | null) => {
-    if (!files?.length) return;
+  const uploadMedia = (files: FileList | null) => {
+    if (!files?.length || !canEditMedia) return;
+    if (!canUploadMore) {
+      setNotice(`You can upload up to ${MAX_MEDIA} photos.`);
+      return;
+    }
     startTransition(async () => {
       setNotice(null);
       const supabase = createBrowserClient();
-      const newPhotos: ProviderPhoto[] = [];
+      const newMedia: ProviderMedia[] = [];
+      const filesArray = Array.from(files).slice(0, MAX_MEDIA - media.length);
 
-      for (const file of Array.from(files)) {
+      for (const file of filesArray) {
         const path = `${providerId}/${Date.now()}-${file.name}`;
         const { error: uploadError } = await supabase.storage
           .from("provider-photos")
@@ -86,48 +132,62 @@ export default function ProviderMediaManager({
           setNotice(uploadError.message);
           continue;
         }
+        const publicUrl = getPublicStorageUrl("provider-photos", path);
+        if (!publicUrl) {
+          setNotice("Unable to build a public URL for this image.");
+          continue;
+        }
         const { data, error: insertError } = await supabase
-          .from("provider_photos")
-          .insert({ provider_id: providerId, path })
-          .select("id, path")
+          .from("provider_media")
+          .insert({ provider_id: providerId, url: publicUrl, sort_order: Date.now() })
+          .select("id, url, sort_order")
           .maybeSingle();
         if (insertError) {
           setNotice(insertError.message);
           continue;
         }
         if (data) {
-          newPhotos.push({ id: data.id, path: data.path });
+          newMedia.push({ id: data.id, url: data.url, sort_order: data.sort_order ?? 0 });
         }
       }
 
-      if (newPhotos.length) {
-        setPhotos((prev) => [...newPhotos, ...prev]);
+      if (newMedia.length) {
+        setMedia((prev) => [...newMedia, ...prev]);
       }
     });
   };
 
-  const removePhoto = (photo: ProviderPhoto) => {
+  const removeMedia = (item: ProviderMedia) => {
+    if (!canEditMedia) return;
     startTransition(async () => {
       setNotice(null);
       const supabase = createBrowserClient();
-      await supabase.storage.from("provider-photos").remove([photo.path]);
-      const { error } = await supabase.from("provider_photos").delete().eq("id", photo.id);
+      const path = getStoragePathFromPublicUrl(item.url, "provider-photos");
+      if (path) {
+        await supabase.storage.from("provider-photos").remove([path]);
+      }
+      const { error } = await supabase.from("provider_media").delete().eq("id", item.id);
       if (error) {
         setNotice(error.message);
         return;
       }
-      setPhotos((prev) => prev.filter((item) => item.id !== photo.id));
+      setMedia((prev) => prev.filter((entry) => entry.id !== item.id));
     });
   };
 
   return (
     <div className="space-y-4">
+      {!canEditMedia ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Media uploads are available once your listing is published and verified.
+        </div>
+      ) : null}
       <div>
         <div className="text-sm font-semibold text-foreground">Logo</div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          {logoPath && getPublicStorageUrl("provider-logos", logoPath) ? (
+          {logoSrc ? (
             <Image
-              src={getPublicStorageUrl("provider-logos", logoPath) ?? ""}
+              src={logoSrc}
               alt="Provider logo"
               width={64}
               height={64}
@@ -142,7 +202,7 @@ export default function ProviderMediaManager({
           <Input
             type="file"
             accept="image/*"
-            disabled={isPending}
+            disabled={isPending || !canEditMedia}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) {
@@ -151,8 +211,14 @@ export default function ProviderMediaManager({
               event.currentTarget.value = "";
             }}
           />
-          {logoPath ? (
-            <Button size="sm" variant="outline" type="button" onClick={removeLogo} disabled={isPending}>
+          {(logoPath || logoUrl) ? (
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={removeLogo}
+              disabled={isPending || !canEditMedia}
+            >
               Remove logo
             </Button>
           ) : null}
@@ -166,24 +232,22 @@ export default function ProviderMediaManager({
             type="file"
             accept="image/*"
             multiple
-            disabled={isPending}
+            disabled={isPending || !canEditMedia || !canUploadMore}
             onChange={(event) => {
-              uploadPhotos(event.target.files);
+              uploadMedia(event.target.files);
               event.currentTarget.value = "";
             }}
           />
+          <span className="text-xs text-muted-foreground">
+            {media.length}/{MAX_MEDIA} used
+          </span>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {photos.length ? (
-            photos.map((photo) => {
-              const photoUrl = getPublicStorageUrl("provider-photos", photo.path);
-              if (!photoUrl) {
-                return null;
-              }
-              return (
-              <div key={photo.id} className="rounded-lg border border-border/70 p-2">
+          {media.length ? (
+            media.map((item) => (
+              <div key={item.id} className="rounded-lg border border-border/70 p-2">
                 <Image
-                  src={photoUrl}
+                  src={item.url}
                   alt="Provider photo"
                   width={480}
                   height={320}
@@ -195,14 +259,13 @@ export default function ProviderMediaManager({
                   size="sm"
                   variant="outline"
                   type="button"
-                  onClick={() => removePhoto(photo)}
-                  disabled={isPending}
+                  onClick={() => removeMedia(item)}
+                  disabled={isPending || !canEditMedia}
                 >
                   Remove
                 </Button>
               </div>
-            );
-            })
+            ))
           ) : (
             <div className="text-sm text-muted-foreground">No photos uploaded yet.</div>
           )}

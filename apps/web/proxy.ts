@@ -41,6 +41,7 @@ function isPublicPath(pathname: string) {
   if (pathname === "/login") return true;
   if (pathname === "/logout") return true;
   if (pathname === "/get-started") return true;
+  if (pathname === "/claim") return true;
   if (pathname === "/onboarding") return true;
   if (pathname === "/onboarding/status") return true;
   if (pathname === "/healthz") return true;

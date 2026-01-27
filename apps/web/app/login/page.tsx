@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, ShieldCheck, User } from "lucide-react";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Badge } from "../../components/ui/badge";
@@ -17,6 +18,9 @@ export default function LoginPage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const nextParam = searchParams.get("next") ?? "";
+  const nextPath = nextParam.startsWith("/") ? nextParam : "";
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -48,7 +52,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.assign("/post-login");
+    window.location.assign(nextPath || "/post-login");
   };
 
   return (
@@ -95,7 +99,7 @@ export default function LoginPage() {
                 </AlertDescription>
                 <div className="mt-3">
                   <Button asChild size="sm">
-                    <Link href="/post-login">Continue</Link>
+                    <Link href={nextPath || "/post-login"}>Continue</Link>
                   </Button>
                 </div>
               </Alert>

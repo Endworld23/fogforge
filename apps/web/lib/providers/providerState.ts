@@ -20,7 +20,7 @@ export function getProviderState(input: ProviderStateInput): ProviderState {
   }
 
   const claimStatus = input.claim_status?.toLowerCase();
-  if (claimStatus === "claimed") {
+  if (claimStatus === "claimed" || claimStatus === "claimed_unverified" || claimStatus === "claimed-unverified") {
     return "CLAIMED_UNVERIFIED";
   }
   if (claimStatus === "unclaimed") {
