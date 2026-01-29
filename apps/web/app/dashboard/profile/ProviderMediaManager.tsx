@@ -53,6 +53,8 @@ export default function ProviderMediaManager({
   const logoSrc = logoUrl ?? getPublicStorageUrl("provider-logos", logoPath ?? undefined);
   const canUploadMore = media.length < MAX_MEDIA;
   const uploadsEnabled = canEditMedia;
+  const logoDisabled = isPending || !uploadsEnabled;
+  const photosDisabled = isPending || !uploadsEnabled || !canUploadMore;
 
   const uploadLogo = (file: File) => {
     if (!uploadsEnabled) return;
@@ -222,7 +224,8 @@ export default function ProviderMediaManager({
           <Input
             type="file"
             accept="image/*"
-            disabled={isPending || !uploadsEnabled}
+            className={logoDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+            disabled={logoDisabled}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) {
@@ -252,7 +255,8 @@ export default function ProviderMediaManager({
             type="file"
             accept="image/*"
             multiple
-            disabled={isPending || !uploadsEnabled || !canUploadMore}
+            className={photosDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+            disabled={photosDisabled}
             onChange={(event) => {
               uploadMedia(event.target.files);
               event.currentTarget.value = "";
