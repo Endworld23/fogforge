@@ -41,6 +41,10 @@ Set these in `.env.local` or your environment:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
+## Architecture
+
+Use `docs/ARCHITECTURE_INDEX.md` to cross-reference routes, actions, tables, and integrations when updating features or debugging production behavior.
+
 ## Optional helper
 
 ```bash
