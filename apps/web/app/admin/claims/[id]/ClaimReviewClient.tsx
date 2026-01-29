@@ -36,7 +36,7 @@ export default function ClaimReviewClient({
 
   const canApprove = status === "PENDING";
   const canReject = status === "PENDING";
-  const canVerify = status === "APPROVED" && providerStateLocal !== "VERIFIED";
+  const canVerify = providerStateLocal === "CLAIMED_UNVERIFIED";
   const canTogglePublish = providerStateLocal === "VERIFIED";
 
   const handleApprove = () => {
@@ -50,6 +50,7 @@ export default function ClaimReviewClient({
       const now = new Date().toISOString();
       setStatus("APPROVED");
       setReviewedAtLocal(now);
+      setProviderStateLocal("CLAIMED_UNVERIFIED");
       setNotice(result.message);
       router.refresh();
     });

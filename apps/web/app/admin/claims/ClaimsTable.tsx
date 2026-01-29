@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
+import ProviderStateBadges from "../../../components/admin/ProviderStateBadges";
 import { approveClaimRequestAction, rejectClaimRequestAction, verifyProviderFromClaimAction } from "./actions";
 
 type ClaimRow = {
@@ -34,6 +34,8 @@ type ClaimRow = {
     metros: { name: string; state: string }[] | null;
   } | null;
   documents: { id: string; doc_type: string; file_url: string }[];
+  provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
+  is_published: boolean;
 };
 
 type ClaimsTableProps = {
@@ -156,21 +158,17 @@ export default function ClaimsTable({ claims }: ClaimsTableProps) {
                       {providerName}
                     </Link>
                   </CardTitle>
-                  <Badge
-                    variant={
-                      claim.status === "PENDING"
-                        ? "secondary"
-                        : claim.status === "APPROVED"
-                          ? "outline"
-                          : "destructive"
-                    }
-                  >
-                    {claim.status}
-                  </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {location ?? `Provider ID: ${claim.provider_id}`}
                 </div>
+                <ProviderStateBadges
+                  claimStatus={claim.status}
+                  providerState={claim.provider_state}
+                  isPublished={claim.is_published}
+                  className="text-xs"
+                  showNextStep
+                />
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-muted-foreground">
                 <div className="grid gap-3 md:grid-cols-2">

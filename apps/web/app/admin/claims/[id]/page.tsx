@@ -2,13 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import AdminPageHeader from "../../../../components/admin/AdminPageHeader";
-import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { getProviderState } from "../../../../lib/providers/providerState";
 import { isAdminServer } from "../../../../lib/auth/isAdminServer";
 import { createServerSupabaseReadOnly } from "../../../../lib/supabase/server";
 import ClaimReviewClient from "./ClaimReviewClient";
+import ProviderStateBadges from "../../../../components/admin/ProviderStateBadges";
 
 export const dynamic = "force-dynamic";
 
@@ -148,25 +148,15 @@ export default async function AdminClaimDetailPage({ params }: ClaimDetailPagePr
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge
-          variant={
-            row.status === "PENDING"
-              ? "secondary"
-              : row.status === "APPROVED"
-                ? "outline"
-                : "destructive"
-          }
-        >
-          {row.status}
-        </Badge>
-        <Badge variant="outline">Provider: {providerState}</Badge>
-        {provider?.is_published != null ? (
-          <Badge variant={provider.is_published ? "secondary" : "outline"}>
-            {provider.is_published ? "Published" : "Draft"}
-          </Badge>
-        ) : null}
         {provider?.status ? <Badge variant="outline">{provider.status}</Badge> : null}
       </div>
+      {provider ? (
+        <ProviderStateBadges
+          claimStatus={row.status}
+          providerState={providerState}
+          isPublished={Boolean(provider.is_published)}
+        />
+      ) : null}
 
       <Card>
         <CardHeader>

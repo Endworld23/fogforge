@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { getProviderState } from "../../../../lib/providers/providerState";
 import { createServerSupabaseReadOnly } from "../../../../lib/supabase/server";
 import ProviderActions from "./ProviderActions";
+import ProviderStateBadges from "../../../../components/admin/ProviderStateBadges";
 
 type ProviderDetailProps = {
   params: Promise<{ slug: string }>;
@@ -101,14 +102,6 @@ export default async function ProviderDetailPage({ params }: ProviderDetailProps
     .filter(Boolean)
     .join(" • ");
   const providerState = getProviderState(provider);
-  const providerStateLabel =
-    providerState === "VERIFIED"
-      ? "Verified"
-      : providerState === "CLAIMED_UNVERIFIED"
-        ? "Claimed (unverified)"
-        : "Unclaimed";
-  const providerStateVariant =
-    providerState === "VERIFIED" ? "secondary" : "outline";
 
   return (
     <div className="space-y-6">
@@ -126,11 +119,8 @@ export default async function ProviderDetailPage({ params }: ProviderDetailProps
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline">{provider.status}</Badge>
-        <Badge variant={provider.is_published ? "secondary" : "outline"}>
-          {provider.is_published ? "Published" : "Draft"}
-        </Badge>
-        <Badge variant={providerStateVariant}>{providerStateLabel}</Badge>
       </div>
+      <ProviderStateBadges providerState={providerState} isPublished={provider.is_published} />
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
         <Card>

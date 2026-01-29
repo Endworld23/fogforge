@@ -4,6 +4,7 @@ import { Badge } from "../../../components/ui/badge";
 import { createServerSupabaseReadOnly } from "../../../lib/supabase/server";
 import { isAdminServer } from "../../../lib/auth/isAdminServer";
 import ClaimsTable from "./ClaimsTable";
+import { getProviderState } from "../../../lib/providers/providerState";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,16 @@ type ClaimRow = {
     city: string | null;
     state: string | null;
     verified_at: string | null;
+    claim_status: string | null;
+    is_published: boolean | null;
+    claimed_by_user_id: string | null;
+    is_claimed: boolean | null;
+    user_id: string | null;
     metros: { name: string; state: string }[] | null;
   } | null;
   documents: { id: string; doc_type: string; file_url: string }[];
+  provider_state: "UNCLAIMED" | "CLAIMED_UNVERIFIED" | "VERIFIED";
+  is_published: boolean;
 };
 
 export default async function AdminClaimsPage() {
@@ -47,7 +55,7 @@ export default async function AdminClaimsPage() {
     .schema("public")
     .from("provider_claim_requests")
     .select(
-      "id, provider_id, requester_user_id, requester_email, status, message, created_at, reviewed_at, claimant_first_name, claimant_last_name, claimant_phone, claimant_role, claimant_role_other, claimant_address_line1, claimant_address_line2, claimant_city, claimant_state, claimant_zip, provider:providers(business_name, city, state, verified_at, metros(name,state)), documents:provider_claim_request_documents(id, doc_type, file_url)"
+      "id, provider_id, requester_user_id, requester_email, status, message, created_at, reviewed_at, claimant_first_name, claimant_last_name, claimant_phone, claimant_role, claimant_role_other, claimant_address_line1, claimant_address_line2, claimant_city, claimant_state, claimant_zip, provider:providers(business_name, city, state, verified_at, claim_status, is_published, claimed_by_user_id, is_claimed, user_id, metros(name,state)), documents:provider_claim_request_documents(id, doc_type, file_url)"
     )
     .order("created_at", { ascending: false });
 
@@ -72,6 +80,14 @@ export default async function AdminClaimsPage() {
     claimant_zip: claim.claimant_zip ?? null,
     provider: claim.provider?.[0] ?? null,
     documents: claim.documents ?? [],
+    provider_state: getProviderState({
+      claim_status: claim.provider?.[0]?.claim_status ?? null,
+      verified_at: claim.provider?.[0]?.verified_at ?? null,
+      claimed_by_user_id: claim.provider?.[0]?.claimed_by_user_id ?? null,
+      is_claimed: claim.provider?.[0]?.is_claimed ?? null,
+      user_id: claim.provider?.[0]?.user_id ?? null,
+    }),
+    is_published: Boolean(claim.provider?.[0]?.is_published),
   }));
 
   return (
